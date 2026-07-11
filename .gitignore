@@ -1,0 +1,49 @@
+﻿# Sistema operacional
+.DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+.venv/
+venv/
+
+# Node / logs
+node_modules/
+*.log
+
+# Docker / LocalStack
+localstack/
+*.pid
+
+# AWS credentials
+.aws/
+credentials
+config
+
+# Arquivos sensíveis ou temporários do projeto
+docker-compose.backup.yml
+key.json
+key-local.json
+flag.json
+flag-local.json
+flag-update.json
+targeting-local.json
+ingress-host.txt
+
+# Evidências locais
+evidencia-compose-final.txt
+evidencia-final-k8s.txt
+evidencia-retorno-lab.txt
+
+# Kubernetes com secrets reais/exportados
+k8s-final/
+
+# Manifests antigos/intermediários
+k8s/
+
+# Arquivos temporários de teste
+rule.json

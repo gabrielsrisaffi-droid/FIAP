@@ -1,0 +1,176 @@
+services:
+  postgres-auth:
+    image: postgres:15-alpine
+    container_name: postgres-auth
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: auth_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - ./auth-service/auth-service-main/db/init.sql:/docker-entrypoint-initdb.d/01-auth-init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d auth_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  postgres-flags:
+    image: postgres:15-alpine
+    container_name: postgres-flags
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: flags_db
+    ports:
+      - "5434:5432"
+    volumes:
+      - ./flag-service/flag-service-main/db/init.sql:/docker-entrypoint-initdb.d/01-flag-init.sql
+      - ./targeting-service/targeting-service-main/db/init.sql:/docker-entrypoint-initdb.d/02-targeting-init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d flags_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+
+  localstack:
+    image: localstack/localstack:3.8.1
+    container_name: localstack
+    ports:
+      - "4566:4566"
+    environment:
+      SERVICES: sqs
+      DEBUG: 1
+      AWS_DEFAULT_REGION: us-east-1
+    volumes:
+      - "./localstack:/var/lib/localstack"
+
+  dynamodb-local:
+    image: amazon/dynamodb-local:latest
+    container_name: dynamodb-local
+    command: "-jar DynamoDBLocal.jar -sharedDb -inMemory"
+    ports:
+      - "8000:8000"
+
+  local-init:
+    image: python:3.11-slim
+    container_name: local-init
+    working_dir: /app
+    volumes:
+      - ./local-init:/app
+    command: sh -c "pip install boto3 && python init_local_aws.py"
+    depends_on:
+      - localstack
+      - dynamodb-local
+
+  auth-service:
+    build:
+      context: ./auth-service/auth-service-main
+    image: auth-service:latest
+    container_name: auth-service
+    environment:
+      PORT: 8001
+      DATABASE_URL: postgres://postgres:postgres@postgres-auth:5432/auth_db?sslmode=disable
+      MASTER_KEY: admin123
+    ports:
+      - "8001:8001"
+    depends_on:
+      postgres-auth:
+        condition: service_healthy
+    restart: unless-stopped
+
+  flag-service:
+    build:
+      context: ./flag-service/flag-service-main
+    image: flag-service:latest
+    container_name: flag-service
+    environment:
+      PORT: 8002
+      DATABASE_URL: postgres://postgres:postgres@postgres-flags:5432/flags_db?sslmode=disable
+      AUTH_SERVICE_URL: http://auth-service:8001
+    ports:
+      - "8002:8002"
+    depends_on:
+      postgres-flags:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+    restart: unless-stopped
+
+  targeting-service:
+    build:
+      context: ./targeting-service/targeting-service-main
+    image: targeting-service:latest
+    container_name: targeting-service
+    environment:
+      PORT: 8003
+      DATABASE_URL: postgres://postgres:postgres@postgres-flags:5432/flags_db?sslmode=disable
+      AUTH_SERVICE_URL: http://auth-service:8001
+    ports:
+      - "8003:8003"
+    depends_on:
+      postgres-flags:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+    restart: unless-stopped
+
+  evaluation-service:
+    build:
+      context: ./evaluation-service/evaluation-service-main
+    image: evaluation-service:latest
+    container_name: evaluation-service
+    environment:
+      PORT: 8004
+      REDIS_URL: redis://redis:6379
+      FLAG_SERVICE_URL: http://flag-service:8002
+      TARGETING_SERVICE_URL: http://targeting-service:8003
+      AUTH_SERVICE_URL: http://auth-service:8001
+      SERVICE_API_KEY: tm_key_fac379fb8c03acceeefc0c6fdb3baa2f88351edc738b82fc7ae6c55106a2537b
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: local
+      AWS_SECRET_ACCESS_KEY: local
+      AWS_SQS_URL: http://localstack:4566/000000000000/togglemaster-events
+      SQS_ENDPOINT_URL: http://localstack:4566
+    ports:
+      - "8004:8004"
+    depends_on:
+      redis:
+        condition: service_started
+      local-init:
+        condition: service_completed_successfully
+      auth-service:
+        condition: service_started
+      flag-service:
+        condition: service_started
+      targeting-service:
+        condition: service_started
+    restart: unless-stopped
+
+  analytics-service:
+    build:
+      context: ./analytics-service/analytics-service-main
+    image: analytics-service:latest
+    container_name: analytics-service
+    environment:
+      PORT: 8005
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: local
+      AWS_SECRET_ACCESS_KEY: local
+      AWS_SQS_URL: http://localstack:4566/000000000000/togglemaster-events
+      AWS_DYNAMODB_TABLE: ToggleMasterAnalytics
+      SQS_ENDPOINT_URL: http://localstack:4566
+      DYNAMODB_ENDPOINT: http://dynamodb-local:8000
+    ports:
+      - "8005:8005"
+    depends_on:
+      local-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
