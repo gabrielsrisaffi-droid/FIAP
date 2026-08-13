@@ -47,3 +47,8 @@ k8s/
 
 # Arquivos temporários de teste
 rule.json
+# VS Code
+.vscode/
+
+# Arquivo manual de teste do SQS
+manual-sqs-message.json
