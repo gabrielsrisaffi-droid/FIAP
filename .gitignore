@@ -52,3 +52,15 @@ rule.json
 
 # Arquivo manual de teste do SQS
 manual-sqs-message.json
+# Terraform
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tflock
+*.tfvars
+!*.tfvars.example
+backend.hcl
+!backend.hcl.example
+crash.log
+crash.*.log
