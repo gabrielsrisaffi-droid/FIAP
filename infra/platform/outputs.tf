@@ -58,3 +58,55 @@ output "redis_security_group_id" {
   description = "Security Group do Redis."
   value       = aws_security_group.redis.id
 }
+output "rds_endpoints" {
+  description = "Endpoints privados dos bancos PostgreSQL."
+
+  value = {
+    for service_name, database in aws_db_instance.postgresql :
+    service_name => database.address
+  }
+}
+
+output "rds_database_names" {
+  description = "Nomes dos bancos PostgreSQL."
+
+  value = {
+    for service_name, database in aws_db_instance.postgresql :
+    service_name => database.db_name
+  }
+}
+
+output "rds_master_username" {
+  description = "Usuário administrador dos bancos."
+  value       = var.db_master_username
+}
+
+output "rds_master_passwords" {
+  description = "Senhas geradas para os bancos PostgreSQL."
+
+  value = {
+    for service_name, password in random_password.database :
+    service_name => password.result
+  }
+
+  sensitive = true
+}
+output "redis_primary_endpoint" {
+  description = "Endpoint privado do Redis."
+  value       = try(aws_elasticache_replication_group.redis[0].primary_endpoint_address, null)
+}
+
+output "redis_port" {
+  description = "Porta de conexão do Redis."
+  value       = try(aws_elasticache_replication_group.redis[0].port, null)
+}
+
+output "redis_url" {
+  description = "URL TLS usada pelo evaluation-service."
+
+  value = var.enable_redis ? format(
+    "rediss://%s:%s",
+    aws_elasticache_replication_group.redis[0].primary_endpoint_address,
+    aws_elasticache_replication_group.redis[0].port
+  ) : null
+}
