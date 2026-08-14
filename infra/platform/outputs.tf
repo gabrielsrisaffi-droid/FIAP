@@ -39,3 +39,22 @@ output "dynamodb_table_arn" {
   description = "ARN da tabela analítica."
   value       = aws_dynamodb_table.analytics.arn
 }
+output "database_subnet_group_name" {
+  description = "Grupo de sub-redes privadas usado pelos bancos RDS."
+  value       = aws_db_subnet_group.databases.name
+}
+
+output "redis_subnet_group_name" {
+  description = "Grupo de sub-redes privadas usado pelo ElastiCache."
+  value       = aws_elasticache_subnet_group.redis.name
+}
+
+output "postgresql_security_group_id" {
+  description = "Security Group dos bancos PostgreSQL."
+  value       = aws_security_group.postgresql.id
+}
+
+output "redis_security_group_id" {
+  description = "Security Group do Redis."
+  value       = aws_security_group.redis.id
+}
