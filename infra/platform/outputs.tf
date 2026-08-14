@@ -110,3 +110,22 @@ output "redis_url" {
     aws_elasticache_replication_group.redis[0].port
   ) : null
 }
+output "eks_cluster_name" {
+  description = "Nome do cluster EKS."
+  value       = try(aws_eks_cluster.main[0].name, null)
+}
+
+output "eks_cluster_endpoint" {
+  description = "Endpoint da API do Kubernetes."
+  value       = try(aws_eks_cluster.main[0].endpoint, null)
+}
+
+output "eks_cluster_security_group_id" {
+  description = "Security Group criado pelo EKS para o cluster."
+  value       = try(aws_eks_cluster.main[0].vpc_config[0].cluster_security_group_id, null)
+}
+
+output "eks_node_group_name" {
+  description = "Nome do node group gerenciado."
+  value       = try(aws_eks_node_group.main[0].node_group_name, null)
+}

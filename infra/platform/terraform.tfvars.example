@@ -3,3 +3,4 @@
 
 enable_rds = false
 enable_redis = false
+enable_eks = false

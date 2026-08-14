@@ -105,3 +105,50 @@ variable "redis_node_type" {
   type        = string
   default     = "cache.t3.micro"
 }
+variable "enable_eks" {
+  description = "Controla a criação do cluster EKS e do node group."
+  type        = bool
+  default     = false
+}
+
+variable "eks_cluster_name" {
+  description = "Nome do cluster Kubernetes."
+  type        = string
+  default     = "togglemaster-eks"
+}
+
+variable "kubernetes_version" {
+  description = "Versão do Kubernetes usada pelo EKS."
+  type        = string
+  default     = "1.34"
+}
+
+variable "eks_node_instance_types" {
+  description = "Tipos de instância permitidos no node group."
+  type        = list(string)
+  default     = ["t3.medium"]
+}
+
+variable "eks_node_desired_size" {
+  description = "Quantidade inicial de nodes."
+  type        = number
+  default     = 1
+}
+
+variable "eks_node_min_size" {
+  description = "Quantidade mínima de nodes."
+  type        = number
+  default     = 1
+}
+
+variable "eks_node_max_size" {
+  description = "Quantidade máxima de nodes."
+  type        = number
+  default     = 2
+}
+
+variable "eks_public_access_cidrs" {
+  description = "CIDRs autorizados a acessar a API pública do EKS."
+  type        = list(string)
+  default     = ["0.0.0.0/0"]
+}
