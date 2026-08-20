@@ -1,14 +1,23 @@
-data "aws_caller_identity" "platform" {}
+data "aws_iam_roles" "eks_cluster" {
+  name_regex  = ".*LabEksClusterRole.*"
+  path_prefix = "/"
+}
+
+data "aws_iam_roles" "eks_node" {
+  name_regex  = ".*LabEksNodeRole.*"
+  path_prefix = "/"
+}
 
 locals {
-  academy_lab_role_arn = "arn:aws:iam::${data.aws_caller_identity.platform.account_id}:role/LabRole"
+  eks_cluster_role_arn = one(data.aws_iam_roles.eks_cluster.arns)
+  eks_node_role_arn    = one(data.aws_iam_roles.eks_node.arns)
 }
 
 resource "aws_eks_cluster" "main" {
   count = var.enable_eks ? 1 : 0
 
   name     = var.eks_cluster_name
-  role_arn = local.academy_lab_role_arn
+  role_arn = local.eks_cluster_role_arn
   version  = var.kubernetes_version
 
   access_config {
@@ -43,7 +52,7 @@ resource "aws_eks_node_group" "main" {
 
   cluster_name    = aws_eks_cluster.main[0].name
   node_group_name = "${var.eks_cluster_name}-nodes"
-  node_role_arn   = local.academy_lab_role_arn
+  node_role_arn   = local.eks_node_role_arn
   subnet_ids      = aws_subnet.public[*].id
 
   ami_type       = "AL2023_x86_64_STANDARD"
