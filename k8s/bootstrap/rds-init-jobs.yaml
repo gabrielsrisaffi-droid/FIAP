@@ -1,0 +1,272 @@
+# Bootstrap dos RDS existentes. Nao inicia um servidor PostgreSQL no pod.
+# Credenciais somente por Secret; certificado publico pelo ConfigMap rds-ca.
+# Jobs finalizados sao mantidos para consulta dos logs. Reaplicar nao os executa novamente.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: auth-db-init
+  namespace: togglemaster
+  labels:
+    app.kubernetes.io/part-of: togglemaster
+    app.kubernetes.io/component: db-bootstrap
+    app.kubernetes.io/name: auth-db-init
+spec:
+  backoffLimit: 1
+  activeDeadlineSeconds: 300
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/part-of: togglemaster
+        app.kubernetes.io/component: db-bootstrap
+        app.kubernetes.io/name: auth-db-init
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 70
+        runAsGroup: 70
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: psql
+          image: postgres:16-alpine
+          imagePullPolicy: IfNotPresent
+          command: ["psql"]
+          args:
+            - "-X"
+            - "--no-password"
+            - "--set=ON_ERROR_STOP=1"
+            - "--single-transaction"
+            - "--file=/sql/init.sql"
+            - >-
+              --command=SELECT current_database() AS banco, ssl, version AS tls
+              FROM pg_stat_ssl WHERE pid = pg_backend_pid();
+            - >-
+              --command=SELECT 'api_keys' AS tabela, count(*) AS registros
+              FROM public.api_keys;
+          envFrom:
+            - secretRef:
+                name: auth-db-admin
+          env:
+            - name: PGSSLMODE
+              value: verify-full
+            - name: PGSSLROOTCERT
+              value: /etc/rds-ca/global-bundle.pem
+            - name: PGCONNECT_TIMEOUT
+              value: "10"
+            - name: PGOPTIONS
+              value: "-c statement_timeout=60000 -c lock_timeout=10000"
+          resources:
+            requests:
+              cpu: 50m
+              memory: 32Mi
+            limits:
+              cpu: 250m
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: sql
+              mountPath: /sql
+              readOnly: true
+            - name: rds-ca
+              mountPath: /etc/rds-ca
+              readOnly: true
+      volumes:
+        - name: sql
+          configMap:
+            name: auth-db-sql
+            items:
+              - key: init.sql
+                path: init.sql
+        - name: rds-ca
+          configMap:
+            name: rds-ca
+            items:
+              - key: global-bundle.pem
+                path: global-bundle.pem
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: flag-db-init
+  namespace: togglemaster
+  labels:
+    app.kubernetes.io/part-of: togglemaster
+    app.kubernetes.io/component: db-bootstrap
+    app.kubernetes.io/name: flag-db-init
+spec:
+  backoffLimit: 1
+  activeDeadlineSeconds: 300
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/part-of: togglemaster
+        app.kubernetes.io/component: db-bootstrap
+        app.kubernetes.io/name: flag-db-init
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 70
+        runAsGroup: 70
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: psql
+          image: postgres:16-alpine
+          imagePullPolicy: IfNotPresent
+          command: ["psql"]
+          args:
+            - "-X"
+            - "--no-password"
+            - "--set=ON_ERROR_STOP=1"
+            - "--single-transaction"
+            - "--file=/sql/init.sql"
+            - >-
+              --command=SELECT current_database() AS banco, ssl, version AS tls
+              FROM pg_stat_ssl WHERE pid = pg_backend_pid();
+            - >-
+              --command=SELECT 'flags' AS tabela, count(*) AS registros
+              FROM public.flags;
+          envFrom:
+            - secretRef:
+                name: flag-db-admin
+          env:
+            - name: PGSSLMODE
+              value: verify-full
+            - name: PGSSLROOTCERT
+              value: /etc/rds-ca/global-bundle.pem
+            - name: PGCONNECT_TIMEOUT
+              value: "10"
+            - name: PGOPTIONS
+              value: "-c statement_timeout=60000 -c lock_timeout=10000"
+          resources:
+            requests:
+              cpu: 50m
+              memory: 32Mi
+            limits:
+              cpu: 250m
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: sql
+              mountPath: /sql
+              readOnly: true
+            - name: rds-ca
+              mountPath: /etc/rds-ca
+              readOnly: true
+      volumes:
+        - name: sql
+          configMap:
+            name: flag-db-sql
+            items:
+              - key: init.sql
+                path: init.sql
+        - name: rds-ca
+          configMap:
+            name: rds-ca
+            items:
+              - key: global-bundle.pem
+                path: global-bundle.pem
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: targeting-db-init
+  namespace: togglemaster
+  labels:
+    app.kubernetes.io/part-of: togglemaster
+    app.kubernetes.io/component: db-bootstrap
+    app.kubernetes.io/name: targeting-db-init
+spec:
+  backoffLimit: 1
+  activeDeadlineSeconds: 300
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/part-of: togglemaster
+        app.kubernetes.io/component: db-bootstrap
+        app.kubernetes.io/name: targeting-db-init
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 70
+        runAsGroup: 70
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: psql
+          image: postgres:16-alpine
+          imagePullPolicy: IfNotPresent
+          command: ["psql"]
+          args:
+            - "-X"
+            - "--no-password"
+            - "--set=ON_ERROR_STOP=1"
+            - "--single-transaction"
+            - "--file=/sql/init.sql"
+            - >-
+              --command=SELECT current_database() AS banco, ssl, version AS tls
+              FROM pg_stat_ssl WHERE pid = pg_backend_pid();
+            - >-
+              --command=SELECT 'targeting_rules' AS tabela, count(*) AS registros
+              FROM public.targeting_rules;
+          envFrom:
+            - secretRef:
+                name: targeting-db-admin
+          env:
+            - name: PGSSLMODE
+              value: verify-full
+            - name: PGSSLROOTCERT
+              value: /etc/rds-ca/global-bundle.pem
+            - name: PGCONNECT_TIMEOUT
+              value: "10"
+            - name: PGOPTIONS
+              value: "-c statement_timeout=60000 -c lock_timeout=10000"
+          resources:
+            requests:
+              cpu: 50m
+              memory: 32Mi
+            limits:
+              cpu: 250m
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: sql
+              mountPath: /sql
+              readOnly: true
+            - name: rds-ca
+              mountPath: /etc/rds-ca
+              readOnly: true
+      volumes:
+        - name: sql
+          configMap:
+            name: targeting-db-sql
+            items:
+              - key: init.sql
+                path: init.sql
+        - name: rds-ca
+          configMap:
+            name: rds-ca
+            items:
+              - key: global-bundle.pem
+                path: global-bundle.pem

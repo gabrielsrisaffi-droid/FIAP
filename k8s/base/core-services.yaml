@@ -1,0 +1,408 @@
+# Primeira implantacao manual; migrar estes recursos para o fluxo GitOps.
+# Sem senhas: somente referencias aos Secrets existentes.
+# /health no codigo atual verifica HTTP, nao toda a cadeia de dependencias.
+# Ao atualizar imagens, atualizar a tag E o digest: o digest prevalece.
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-service
+  namespace: togglemaster
+  labels:
+    app.kubernetes.io/name: auth-service
+    app.kubernetes.io/part-of: togglemaster
+    app.kubernetes.io/component: core-services
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: auth-service
+  ports:
+    - name: http
+      port: 8001
+      targetPort: http
+      protocol: TCP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-service
+  namespace: togglemaster
+  labels:
+    app.kubernetes.io/name: auth-service
+    app.kubernetes.io/part-of: togglemaster
+    app.kubernetes.io/component: core-services
+spec:
+  replicas: 1
+  revisionHistoryLimit: 2
+  progressDeadlineSeconds: 300
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: auth-service
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: auth-service
+        app.kubernetes.io/part-of: togglemaster
+        app.kubernetes.io/component: core-services
+        app.kubernetes.io/version: "326de1f"
+    spec:
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 30
+      nodeSelector:
+        kubernetes.io/os: linux
+        kubernetes.io/arch: amd64
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: auth-service
+          image: 505980114754.dkr.ecr.us-east-1.amazonaws.com/togglemaster/auth-service:326de1f@sha256:666969f1a07001915254cf806e69a45a2b9b6d4e977e29501ebcc49aec106f0c
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8001
+              protocol: TCP
+          env:
+            - name: PORT
+              value: "8001"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: auth-db-app
+                  key: DATABASE_URL
+            - name: MASTER_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: auth-service-secrets
+                  key: MASTER_KEY
+          resources:
+            requests:
+              cpu: 100m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 24
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 20
+            timeoutSeconds: 2
+            failureThreshold: 3
+          volumeMounts:
+            - name: rds-ca
+              mountPath: /etc/rds-ca
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: rds-ca
+          configMap:
+            name: rds-ca
+            items:
+              - key: global-bundle.pem
+                path: global-bundle.pem
+        - name: tmp
+          emptyDir:
+            sizeLimit: 64Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: flag-service
+  namespace: togglemaster
+  labels:
+    app.kubernetes.io/name: flag-service
+    app.kubernetes.io/part-of: togglemaster
+    app.kubernetes.io/component: core-services
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: flag-service
+  ports:
+    - name: http
+      port: 8002
+      targetPort: http
+      protocol: TCP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flag-service
+  namespace: togglemaster
+  labels:
+    app.kubernetes.io/name: flag-service
+    app.kubernetes.io/part-of: togglemaster
+    app.kubernetes.io/component: core-services
+spec:
+  replicas: 1
+  revisionHistoryLimit: 2
+  progressDeadlineSeconds: 300
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: flag-service
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: flag-service
+        app.kubernetes.io/part-of: togglemaster
+        app.kubernetes.io/component: core-services
+        app.kubernetes.io/version: "326de1f"
+    spec:
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 30
+      nodeSelector:
+        kubernetes.io/os: linux
+        kubernetes.io/arch: amd64
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: flag-service
+          image: 505980114754.dkr.ecr.us-east-1.amazonaws.com/togglemaster/flag-service:326de1f@sha256:d1f0c7849772ca85f9ec1fc759f77ffdc2780061f9da7a73628358ad8349162e
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8002
+              protocol: TCP
+          env:
+            - name: PORT
+              value: "8002"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: flag-db-app
+                  key: DATABASE_URL
+            - name: AUTH_SERVICE_URL
+              value: http://auth-service:8001
+            - name: PYTHONDONTWRITEBYTECODE
+              value: "1"
+            - name: PYTHONUNBUFFERED
+              value: "1"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 24
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 20
+            timeoutSeconds: 2
+            failureThreshold: 3
+          volumeMounts:
+            - name: rds-ca
+              mountPath: /etc/rds-ca
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: rds-ca
+          configMap:
+            name: rds-ca
+            items:
+              - key: global-bundle.pem
+                path: global-bundle.pem
+        - name: tmp
+          emptyDir:
+            sizeLimit: 64Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: targeting-service
+  namespace: togglemaster
+  labels:
+    app.kubernetes.io/name: targeting-service
+    app.kubernetes.io/part-of: togglemaster
+    app.kubernetes.io/component: core-services
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: targeting-service
+  ports:
+    - name: http
+      port: 8003
+      targetPort: http
+      protocol: TCP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: targeting-service
+  namespace: togglemaster
+  labels:
+    app.kubernetes.io/name: targeting-service
+    app.kubernetes.io/part-of: togglemaster
+    app.kubernetes.io/component: core-services
+spec:
+  replicas: 1
+  revisionHistoryLimit: 2
+  progressDeadlineSeconds: 300
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: targeting-service
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: targeting-service
+        app.kubernetes.io/part-of: togglemaster
+        app.kubernetes.io/component: core-services
+        app.kubernetes.io/version: "326de1f"
+    spec:
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 30
+      nodeSelector:
+        kubernetes.io/os: linux
+        kubernetes.io/arch: amd64
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: targeting-service
+          image: 505980114754.dkr.ecr.us-east-1.amazonaws.com/togglemaster/targeting-service:326de1f@sha256:b2e767de00a7f2bf0ab7a43300356b8bb9473c45473187a690a24dfd75a6abde
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8003
+              protocol: TCP
+          env:
+            - name: PORT
+              value: "8003"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: targeting-db-app
+                  key: DATABASE_URL
+            - name: AUTH_SERVICE_URL
+              value: http://auth-service:8001
+            - name: PYTHONDONTWRITEBYTECODE
+              value: "1"
+            - name: PYTHONUNBUFFERED
+              value: "1"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 24
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 20
+            timeoutSeconds: 2
+            failureThreshold: 3
+          volumeMounts:
+            - name: rds-ca
+              mountPath: /etc/rds-ca
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: rds-ca
+          configMap:
+            name: rds-ca
+            items:
+              - key: global-bundle.pem
+                path: global-bundle.pem
+        - name: tmp
+          emptyDir:
+            sizeLimit: 64Mi
