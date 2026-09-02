@@ -75,3 +75,4 @@ crash.*.log
 /k8s/bootstrap/*
 !/k8s/bootstrap/rds-init-jobs.yaml
 !/k8s/bootstrap/initialize-app-databases.ps1
+!/k8s/bootstrap/core-api-smoke.py
