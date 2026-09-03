@@ -15,6 +15,8 @@ WORKDIR /app
 
 RUN apk add --no-cache ca-certificates && update-ca-certificates
 
+RUN apk add --no-cache ca-certificates && update-ca-certificates
+
 RUN adduser -D appuser
 
 COPY --from=builder /app/evaluation-service .
