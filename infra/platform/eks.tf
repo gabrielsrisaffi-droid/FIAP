@@ -52,7 +52,10 @@ resource "aws_eks_node_group" "main" {
   ami_type       = "AL2023_x86_64_STANDARD"
   capacity_type  = "ON_DEMAND"
   instance_types = var.eks_node_instance_types
-  disk_size      = 20
+  launch_template {
+    id      = aws_launch_template.eks_nodes[0].id
+    version = tostring(aws_launch_template.eks_nodes[0].latest_version)
+  }
 
   scaling_config {
     desired_size = var.eks_node_desired_size
