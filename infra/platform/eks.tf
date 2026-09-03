@@ -1,16 +1,10 @@
-data "aws_iam_roles" "eks_cluster" {
-  name_regex  = ".*LabEksClusterRole.*"
-  path_prefix = "/"
-}
-
-data "aws_iam_roles" "eks_node" {
-  name_regex  = ".*LabEksNodeRole.*"
-  path_prefix = "/"
+data "aws_iam_role" "academy_lab" {
+  name = "LabRole"
 }
 
 locals {
-  eks_cluster_role_arn = one(data.aws_iam_roles.eks_cluster.arns)
-  eks_node_role_arn    = one(data.aws_iam_roles.eks_node.arns)
+  eks_cluster_role_arn = data.aws_iam_role.academy_lab.arn
+  eks_node_role_arn    = data.aws_iam_role.academy_lab.arn
 }
 
 resource "aws_eks_cluster" "main" {
