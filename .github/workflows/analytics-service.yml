@@ -1,0 +1,26 @@
+name: Analytics Service CI
+
+on:
+  pull_request:
+    paths:
+      - "analytics-service/analytics-service-main/**"
+      - ".github/workflows/analytics-service.yml"
+      - ".github/workflows/_service-ci.yml"
+      - ".github/scripts/update-image.py"
+  push:
+    branches: [main]
+    paths:
+      - "analytics-service/analytics-service-main/**"
+      - ".github/workflows/analytics-service.yml"
+      - ".github/workflows/_service-ci.yml"
+      - ".github/scripts/update-image.py"
+
+jobs:
+  ci:
+    uses: ./.github/workflows/_service-ci.yml
+    with:
+      service-name: analytics-service
+      service-directory: analytics-service/analytics-service-main
+      language: python
+      manifest: k8s/base/event-services.yaml
+    secrets: inherit

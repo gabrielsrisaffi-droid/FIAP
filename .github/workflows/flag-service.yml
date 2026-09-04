@@ -1,0 +1,26 @@
+name: Flag Service CI
+
+on:
+  pull_request:
+    paths:
+      - "flag-service/flag-service-main/**"
+      - ".github/workflows/flag-service.yml"
+      - ".github/workflows/_service-ci.yml"
+      - ".github/scripts/update-image.py"
+  push:
+    branches: [main]
+    paths:
+      - "flag-service/flag-service-main/**"
+      - ".github/workflows/flag-service.yml"
+      - ".github/workflows/_service-ci.yml"
+      - ".github/scripts/update-image.py"
+
+jobs:
+  ci:
+    uses: ./.github/workflows/_service-ci.yml
+    with:
+      service-name: flag-service
+      service-directory: flag-service/flag-service-main
+      language: python
+      manifest: k8s/base/core-services.yaml
+    secrets: inherit
