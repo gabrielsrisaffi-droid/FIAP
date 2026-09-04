@@ -15,6 +15,9 @@ on:
       - ".github/workflows/_service-ci.yml"
       - ".github/scripts/update-image.py"
 
+permissions:
+  contents: write
+
 jobs:
   ci:
     uses: ./.github/workflows/_service-ci.yml
