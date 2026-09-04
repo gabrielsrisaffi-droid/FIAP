@@ -55,7 +55,7 @@ jobs:
 
       - name: Run Go SAST
         if: inputs.language == 'go'
-        uses: securego/gosec@v2
+        uses: securego/gosec@v2.28.0
         with:
           args: ./${{ inputs.service-directory }}/...
 
