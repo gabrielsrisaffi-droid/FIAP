@@ -77,3 +77,4 @@ crash.*.log
 !/k8s/bootstrap/initialize-app-databases.ps1
 !/k8s/bootstrap/core-api-smoke.py
 !/k8s/base/event-services.yaml
+!/k8s/base/kustomization.yaml
