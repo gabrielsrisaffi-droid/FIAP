@@ -61,7 +61,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: evaluation-service
-          image: "505980114754.dkr.ecr.us-east-1.amazonaws.com/togglemaster/evaluation-service:d1727f1@sha256:0763125ead05fb5470948ba609460412311c6b4265201d1376c681b58416abcb"
+          image: "505980114754.dkr.ecr.us-east-1.amazonaws.com/togglemaster/evaluation-service:3af6e83@sha256:415625b0ae35ad406e3ad417cf73d1d7ef750e397ee44bf1359415ff243b9a22"
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
