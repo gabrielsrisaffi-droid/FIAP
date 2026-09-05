@@ -201,7 +201,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: flag-service
-          image: 505980114754.dkr.ecr.us-east-1.amazonaws.com/togglemaster/flag-service:326de1f@sha256:d1f0c7849772ca85f9ec1fc759f77ffdc2780061f9da7a73628358ad8349162e
+          image: 505980114754.dkr.ecr.us-east-1.amazonaws.com/togglemaster/flag-service:3af6e83@sha256:cbb303f92a0a731de5a5f6e175d23fa3abbfbe74414dbd19b9be661a72882f5c
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
