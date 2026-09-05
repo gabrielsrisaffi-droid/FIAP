@@ -336,7 +336,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: targeting-service
-          image: 505980114754.dkr.ecr.us-east-1.amazonaws.com/togglemaster/targeting-service:326de1f@sha256:b2e767de00a7f2bf0ab7a43300356b8bb9473c45473187a690a24dfd75a6abde
+          image: 505980114754.dkr.ecr.us-east-1.amazonaws.com/togglemaster/targeting-service:3af6e83@sha256:4c4bda61d27ad36790450db7f284bcd027cbb0dde13775e5b7571d27a9bc6ac8
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
