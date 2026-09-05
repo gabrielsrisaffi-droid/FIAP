@@ -111,7 +111,10 @@ Em 5 de setembro de 2026 foram validados:
 - cinco imagens publicadas no ECR com tag `3af6e83` e digest imutável;
 - Argo CD acompanhando a `main` em estado `Synced/Healthy`;
 - cinco Deployments disponíveis e cinco pods `Running`, sem reinícios;
+- cinco endpoints `/health` respondendo `HTTP 200` com `status: ok`;
 - cinco Services `ClusterIP` com endpoints internos ativos;
+- três instâncias RDS e o Redis em estado `available`;
+- DynamoDB em estado `ACTIVE` e fila SQS acessível;
 - reutilização da `LabRole`, sem criação ou alteração de IAM Roles e Policies.
 
 Consulte [RELATORIO_TECNICO.md](RELATORIO_TECNICO.md) para o relatório e o roteiro da apresentação.

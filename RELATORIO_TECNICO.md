@@ -142,6 +142,10 @@ Em 5 de setembro de 2026 foram observados:
 - cinco pods `Running`, `1/1` e sem reinícios;
 - cinco Deployments disponíveis;
 - cinco Services `ClusterIP` com endpoints ativos;
+- cinco endpoints `/health` retornando `HTTP 200` e `status: ok`;
+- três bancos RDS privados, criptografados e em estado `available`;
+- ElastiCache Redis criptografado em trânsito e em repouso, em estado `available`;
+- DynamoDB `ACTIVE` e fila SQS acessível;
 - imagens no cluster com tag de commit e digest SHA-256.
 
 ## 12. Incidentes e correções
