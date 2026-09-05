@@ -1,0 +1,29 @@
+name: Auth Service CI
+
+on:
+  pull_request:
+    paths:
+      - "auth-service/auth-service-main/**"
+      - ".github/workflows/auth-service.yml"
+      - ".github/workflows/_service-ci.yml"
+      - ".github/scripts/update-image.py"
+  push:
+    branches: [main]
+    paths:
+      - "auth-service/auth-service-main/**"
+      - ".github/workflows/auth-service.yml"
+      - ".github/workflows/_service-ci.yml"
+      - ".github/scripts/update-image.py"
+
+permissions:
+  contents: write
+
+jobs:
+  ci:
+    uses: ./.github/workflows/_service-ci.yml
+    with:
+      service-name: auth-service
+      service-directory: auth-service/auth-service-main
+      language: go
+      manifest: k8s/base/core-services.yaml
+    secrets: inherit

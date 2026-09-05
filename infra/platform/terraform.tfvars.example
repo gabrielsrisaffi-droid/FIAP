@@ -1,0 +1,6 @@
+# Recursos com cobrança por hora permanecem desativados por padrão.
+# Altere temporariamente para true apenas durante testes e evidências.
+
+enable_rds = false
+enable_redis = false
+enable_eks = false

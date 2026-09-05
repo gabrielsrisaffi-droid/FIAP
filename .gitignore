@@ -1,4 +1,4 @@
-﻿# Sistema operacional
+# Sistema operacional
 .DS_Store
 Thumbs.db
 
@@ -47,3 +47,34 @@ k8s/
 
 # Arquivos temporários de teste
 rule.json
+# VS Code
+.vscode/
+
+# Arquivo manual de teste do SQS
+manual-sqs-message.json
+# Terraform
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tflock
+*.tfvars
+!*.tfvars.example
+backend.hcl
+!backend.hcl.example
+crash.log
+crash.*.log
+# Versionar somente os manifestos e scripts revisados.
+!/k8s/
+/k8s/*
+!/k8s/base/
+/k8s/base/*
+!/k8s/base/namespace.yaml
+!/k8s/base/core-services.yaml
+!/k8s/bootstrap/
+/k8s/bootstrap/*
+!/k8s/bootstrap/rds-init-jobs.yaml
+!/k8s/bootstrap/initialize-app-databases.ps1
+!/k8s/bootstrap/core-api-smoke.py
+!/k8s/base/event-services.yaml
+!/k8s/base/kustomization.yaml
