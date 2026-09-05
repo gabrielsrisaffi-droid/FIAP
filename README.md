@@ -1,168 +1,117 @@
-# ToggleMaster - Tech Challenge Fase 2
+# ToggleMaster — Tech Challenge Fase 3
 
-Projeto desenvolvido para o Tech Challenge da Pós-graduação FIAP, com foco em modernização de uma aplicação monolítica para uma arquitetura baseada em microsserviços, containers, Kubernetes e serviços gerenciados AWS.
+Projeto da Pós-graduação FIAP voltado à automação de infraestrutura, CI/CD, DevSecOps e GitOps na AWS. A solução executa cinco microsserviços no Amazon EKS e utiliza Terraform, GitHub Actions, Amazon ECR e Argo CD, respeitando as restrições do AWS Academy.
 
-## Visão Geral
+## Arquitetura
 
-O ToggleMaster é uma plataforma de gerenciamento e avaliação de feature flags. A solução foi dividida em cinco microsserviços independentes:
+| Camada | Implementação |
+|---|---|
+| Aplicação | `auth-service`, `flag-service`, `targeting-service`, `evaluation-service` e `analytics-service` |
+| Orquestração | Amazon EKS com Services internos `ClusterIP` |
+| Imagens | Amazon ECR, com tag do commit e digest SHA-256 |
+| Persistência | Três bancos PostgreSQL no Amazon RDS |
+| Cache | Amazon ElastiCache for Redis |
+| Mensageria | Amazon SQS |
+| Dados analíticos | Amazon DynamoDB |
+| Infraestrutura como código | Terraform com estado remoto em S3 |
+| CI/DevSecOps | GitHub Actions, testes, lint, SAST, SCA e scan de containers |
+| CD | Argo CD com sincronização automática da branch `main` |
 
-- `auth-service`: responsável pela geração e validação de API Keys.
-- `flag-service`: responsável pelo cadastro e consulta de feature flags.
-- `targeting-service`: responsável pelas regras de segmentação das flags.
-- `evaluation-service`: responsável pela avaliação das flags para usuários específicos.
-- `analytics-service`: responsável pelo consumo de eventos e persistência analítica.
+## Fluxo de entrega
 
-## Arquitetura Local
+1. Um pull request executa testes, lint, SAST, SCA, build e scan das imagens.
+2. Vulnerabilidades críticas bloqueiam o pipeline.
+3. Após o merge na `main`, cada serviço publica uma imagem imutável no ECR.
+4. O workflow atualiza no Git a imagem do manifesto Kubernetes usando tag e digest.
+5. O Argo CD detecta a alteração, sincroniza o EKS e mantém o estado desejado.
 
-Para execução local, o projeto utiliza Docker Compose com os seguintes componentes:
+Os pipelines não executam `kubectl apply` para implantar os microsserviços. A aplicação do manifesto `Application` é apenas o bootstrap do Argo CD; os deploys seguintes são controlados pelo GitOps.
 
-- 5 microsserviços containerizados.
-- 2 bancos PostgreSQL locais.
-- Redis.
-- LocalStack para simulação do SQS.
-- DynamoDB Local.
-- Serviço auxiliar `local-init` para criação automática da fila SQS e da tabela DynamoDB.
+## Segurança do pipeline
 
-## Arquitetura AWS
+- Go: `go test`, `golangci-lint` e `gosec`.
+- Python: compilação, `ruff` e `bandit`.
+- Dependências e código-fonte: Trivy em modo filesystem.
+- Imagens: build Docker seguido de Trivy.
+- Severidade `CRITICAL`: bloqueia a execução quando há correção disponível.
+- Credenciais: armazenadas somente em GitHub Secrets e no ambiente local.
+- Imagens: publicadas com tag do commit e digest SHA-256.
 
-Na AWS Academy, a aplicação foi implantada utilizando:
+## Restrições do AWS Academy
 
-- Amazon EKS para orquestração Kubernetes.
-- Amazon ECR para armazenamento das imagens Docker.
-- Amazon RDS PostgreSQL para persistência relacional.
-- Amazon ElastiCache Redis para cache.
-- Amazon SQS para mensageria.
-- Amazon DynamoDB para armazenamento analítico.
-- Nginx Ingress Controller para exposição HTTP.
-- Horizontal Pod Autoscaler para escalabilidade automática.
+- Região: `us-east-1`.
+- Conta utilizada na validação: `505980114754`.
+- A role preexistente `LabRole` é apenas consultada e reutilizada.
+- O Terraform não cria nem modifica IAM Roles ou IAM Policies.
+- As credenciais do laboratório são temporárias e nunca devem ser versionadas.
+- O Argo CD não possui Load Balancer público; o acesso administrativo deve ser feito por encaminhamento local de porta.
 
-## Docker Compose
+## GitHub Secrets necessários
 
-O Docker Compose foi utilizado para orquestração local dos microsserviços e dependências. Já os manifests Kubernetes foram utilizados para implantação no EKS, separando responsabilidades em Deployments, Services, ConfigMaps, Secrets, HPAs e Ingress, com probes e limites de recursos para maior resiliência e escalabilidade.
+```text
+AWS_ACCESS_KEY_ID
+AWS_SECRET_ACCESS_KEY
+AWS_SESSION_TOKEN
+AWS_REGION
+AWS_ACCOUNT_ID
+```
 
-## Como executar localmente
+As três credenciais temporárias devem pertencer à mesma sessão do AWS Academy e nunca devem ser registradas em arquivos ou mensagens.
 
-Na raiz do projeto, execute:
+## Estrutura principal
+
+```text
+TechChallenge3/
+├── .github/workflows/
+├── analytics-service/
+├── auth-service/
+├── evaluation-service/
+├── flag-service/
+├── targeting-service/
+├── gitops/
+├── infra/
+├── k8s/
+├── docker-compose.yml
+├── README.md
+└── RELATORIO_TECNICO.md
+```
+
+## Execução local
 
 ```bash
 docker compose up --build
 ```
 
-Esse comando irá:
+Os microsserviços utilizam as portas `8001` a `8005`.
 
-- Construir as imagens dos cinco microsserviços.
-- Subir os bancos PostgreSQL locais.
-- Executar automaticamente os scripts SQL iniciais.
-- Subir o Redis.
-- Subir o LocalStack para simulação do SQS.
-- Subir o DynamoDB Local.
-- Criar automaticamente a fila SQS `togglemaster-events`.
-- Criar automaticamente a tabela DynamoDB `ToggleMasterAnalytics`.
+## Operação no AWS Academy
 
-## Serviços locais
-
-| Serviço | Porta |
-|---|---:|
-| auth-service | 8001 |
-| flag-service | 8002 |
-| targeting-service | 8003 |
-| evaluation-service | 8004 |
-| analytics-service | 8005 |
-| PostgreSQL Auth | 5433 |
-| PostgreSQL Flags/Targeting | 5434 |
-| Redis | 6379 |
-| LocalStack | 4566 |
-| DynamoDB Local | 8000 |
-
-## Health checks locais
-
-Após subir o ambiente, os serviços podem ser validados pelos endpoints de health check:
+Após iniciar uma nova sessão, atualize as credenciais locais e os GitHub Secrets. Para conferir a identidade sem revelar as chaves:
 
 ```bash
-curl http://localhost:8001/health
-curl http://localhost:8002/health
-curl http://localhost:8003/health
-curl http://localhost:8004/health
-curl http://localhost:8005/health
+aws sts get-caller-identity
+aws eks update-kubeconfig --region us-east-1 --name togglemaster-eks
+kubectl get nodes
 ```
 
-## Kubernetes
-
-Os manifests Kubernetes limpos para entrega estão na pasta:
-
-```text
-k8s-clean/
-```
-
-Essa pasta contém:
-
-- Namespace.
-- ConfigMap.
-- Secrets de exemplo.
-- Deployments.
-- Services.
-- Horizontal Pod Autoscalers.
-- Ingress.
-
-Os manifests foram validados com:
+Para conferir o GitOps e a aplicação:
 
 ```bash
-kubectl apply --dry-run=client -f k8s-clean
+kubectl -n argocd get application togglemaster
+kubectl -n togglemaster get deployments,pods,services
 ```
 
-## Segurança
+O resultado esperado do Argo CD é `Synced` e `Healthy`, com os cinco Deployments disponíveis.
 
-As credenciais reais não foram versionadas nos manifests finais.
+## Estado validado da entrega
 
-O arquivo abaixo contém apenas exemplos e placeholders:
+Em 5 de setembro de 2026 foram validados:
 
-```text
-k8s-clean/02-secrets.example.yaml
-```
+- cinco pipelines completos aprovados na `main`;
+- cinco imagens publicadas no ECR com tag `3af6e83` e digest imutável;
+- Argo CD acompanhando a `main` em estado `Synced/Healthy`;
+- cinco Deployments disponíveis e cinco pods `Running`, sem reinícios;
+- cinco Services `ClusterIP` com endpoints internos ativos;
+- reutilização da `LabRole`, sem criação ou alteração de IAM Roles e Policies.
 
-No ambiente real, os valores sensíveis devem ser criados como Secrets do Kubernetes, incluindo:
-
-- URLs de conexão dos bancos RDS.
-- Master Key do serviço de autenticação.
-- API Key usada entre serviços.
-- Credenciais temporárias do AWS Academy.
-
-## Evidências de funcionamento
-
-Durante a execução do projeto, foram validados:
-
-- Build dos cinco microsserviços via Docker Compose.
-- Execução local completa com Docker Compose.
-- Criação automática das tabelas PostgreSQL locais.
-- Criação automática da fila SQS local no LocalStack.
-- Criação automática da tabela DynamoDB Local.
-- Implantação da aplicação no Amazon EKS.
-- Push das imagens Docker para o Amazon ECR.
-- Integração com Amazon RDS PostgreSQL.
-- Integração com Amazon ElastiCache Redis.
-- Integração com Amazon SQS.
-- Integração com Amazon DynamoDB.
-- Exposição externa via Nginx Ingress Controller.
-- Configuração de HPA para `evaluation-service` e `analytics-service`.
-
-## Estrutura principal do projeto
-
-```text
-TechChallenge2/
-├── auth-service/
-├── flag-service/
-├── targeting-service/
-├── evaluation-service/
-├── analytics-service/
-├── local-init/
-├── k8s-clean/
-├── k8s-final/
-├── docker-compose.yml
-└── README.md
-```
-
-## Observação sobre ambiente AWS Academy
-
-A implantação em nuvem foi realizada considerando as limitações do ambiente AWS Academy, utilizando a role `LabRole` e os recursos disponíveis no laboratório.
-
-As credenciais temporárias do AWS Academy precisam ser atualizadas sempre que o laboratório for reiniciado.
+Consulte [RELATORIO_TECNICO.md](RELATORIO_TECNICO.md) para o relatório e o roteiro da apresentação.
