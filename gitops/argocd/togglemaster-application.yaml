@@ -10,7 +10,7 @@ spec:
 
   source:
     repoURL: "https://github.com/gabrielsrisaffi-droid/FIAP.git"
-    targetRevision: "fase-3-devsecops-gitops"
+    targetRevision: "main"
     path: k8s/base
 
   destination:
