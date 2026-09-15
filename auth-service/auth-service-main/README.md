@@ -1,5 +1,7 @@
 # auth-service (Go)
 
+Na Fase 3, este serviço possui pipeline próprio de CI/DevSecOps e publicação imutável no Amazon ECR.
+
 Este é o serviço de autenticação do projeto ToggleMaster. Ele é responsável por criar e validar chaves de API.
 
 ## 📦 Pré-requisitos (Local)
