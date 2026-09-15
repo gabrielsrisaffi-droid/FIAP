@@ -115,6 +115,8 @@ psql -X -w --set=ON_ERROR_STOP=1 --single-transaction --file=/scripts/create.sql
 PGUSER="$APP_DB_USER" PGPASSWORD="$APP_DB_PASSWORD" \
     psql -X -w --set=ON_ERROR_STOP=1 --single-transaction --file=/scripts/verify.sql
 '@
+# O script roda no Windows, mas este comando e interpretado por /bin/sh no Linux.
+$JobCommand = $JobCommand.Replace("`r", '')
 
 $PlannedResources = @()
 $JobNames = @()

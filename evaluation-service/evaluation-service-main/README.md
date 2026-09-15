@@ -1,5 +1,7 @@
 # evaluation-service (Go)
 
+Na Fase 3, este serviço possui pipeline próprio de CI/DevSecOps e publicação imutável no Amazon ECR.
+
 Este é o serviço de avaliação, o "caminho quente" (hot path) do projeto ToggleMaster. É o único endpoint que os clientes finais (ex: seu app mobile, seu site) devem chamar.
 
 Ele é otimizado para alta velocidade e baixa latência usando **cache em Redis**.
@@ -100,4 +102,3 @@ Saída (exemplo): `{"flag_name":"enable-new-dashboard","user_id":"user-abc","res
 **3. Verifique o Cache:** Execute o mesmo comando duas vezes seguidas. Na segunda vez, você verá um log "Cache HIT" no terminal do `evaluation-service`.
 
 **4. Verifique a Fila SQS:** Após fazer as chamadas acima, vá até o console da AWS, abra sua fila SQS e verifique se as mensagens (`EvaluationEvent`) estão chegando.
-

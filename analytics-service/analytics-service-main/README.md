@@ -1,5 +1,7 @@
 # analytics-service (Python)
 
+Na Fase 3, este serviço possui pipeline próprio de CI/DevSecOps e publicação imutável no Amazon ECR.
+
 Este é o serviço de análise (analytics) do projeto ToggleMaster. Ele é um *worker* de backend e não possui uma API pública (exceto `/health`).
 
 Sua única função é:
