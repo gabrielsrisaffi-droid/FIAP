@@ -121,6 +121,7 @@ Consulte [RELATORIO_TECNICO.md](RELATORIO_TECNICO.md) para o relatório e o rote
 
 ## Documentos complementares da entrega
 
+- [Vídeo de demonstração no YouTube](https://youtu.be/9qgjLH8nhnA)
 - [Desafios encontrados e decisões tomadas](DESAFIOS_E_DECISOES.md)
 - [Estimativa de custos AWS](ESTIMATIVA_CUSTOS_AWS.md)
 - [Print do AWS Pricing Calculator](ESTIMATIVA_CUSTOS_AWS.png)
