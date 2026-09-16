@@ -118,3 +118,9 @@ Em 5 de setembro de 2026 foram validados:
 - reutilização da `LabRole`, sem criação ou alteração de IAM Roles e Policies.
 
 Consulte [RELATORIO_TECNICO.md](RELATORIO_TECNICO.md) para o relatório e o roteiro da apresentação.
+
+## Documentos complementares da entrega
+
+- [Desafios encontrados e decisões tomadas](DESAFIOS_E_DECISOES.md)
+- [Estimativa de custos AWS](ESTIMATIVA_CUSTOS_AWS.md)
+- [Print do AWS Pricing Calculator](ESTIMATIVA_CUSTOS_AWS.png)
