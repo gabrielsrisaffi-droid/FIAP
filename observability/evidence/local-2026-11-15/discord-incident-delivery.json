@@ -1,0 +1,17 @@
+{
+  "environment": "local-compose",
+  "incident_id": "Q1PD89LCQCXT91",
+  "delivery_confirmed_by": "bridge logs emitted after successful Discord HTTP response",
+  "transitions": [
+    {
+      "time_utc": "2026-11-15T16:15:55.948Z",
+      "status": "triggered"
+    },
+    {
+      "time_utc": "2026-11-15T16:18:31.022Z",
+      "status": "resolved"
+    }
+  ],
+  "aws_used": false,
+  "recovery": "manual local fault removal; Kubernetes self-healing not tested"
+}

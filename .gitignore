@@ -9,6 +9,14 @@ __pycache__/
 *.pyd
 .env
 .venv/
+.venv-fase4/
+.pytest_cache/
+/tmp/phase4-tools/
+/tmp/phase4-aws-*/
+/tmp/phase4-prometheus.zip
+/tmp/phase4-*.yaml
+/tmp/helm-v3.19.0*
+/tmp/otelcol-contrib-windows.tar.gz
 venv/
 
 # Node / logs

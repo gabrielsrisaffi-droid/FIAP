@@ -1,0 +1,23 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources: [../../k8s/base]
+patches:
+  - target:
+      kind: Deployment
+      name: (auth|flag|targeting|evaluation|analytics)-service
+    patch: |-
+      - op: add
+        path: /spec/template/spec/containers/0/env/-
+        value: {name: OTEL_EXPORTER_OTLP_ENDPOINT, value: "http://otel-collector.observability.svc.cluster.local:4318"}
+      - op: add
+        path: /spec/template/spec/containers/0/env/-
+        value: {name: OTEL_EXPORTER_OTLP_PROTOCOL, value: "http/protobuf"}
+      - op: add
+        path: /spec/template/spec/containers/0/env/-
+        value: {name: OTEL_METRIC_EXPORT_INTERVAL, value: "10000"}
+      - op: add
+        path: /spec/template/spec/containers/0/env/-
+        value: {name: OTEL_RESOURCE_ATTRIBUTES, value: "deployment.environment.name=fiap-lab"}
+      - op: add
+        path: /spec/template/spec/containers/0/env/-
+        value: {name: OTEL_TRACES_SAMPLER, value: "parentbased_always_on"}

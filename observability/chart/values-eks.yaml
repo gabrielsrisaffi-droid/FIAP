@@ -1,0 +1,12 @@
+newRelic:
+  enabled: true
+  endpoint: https://otlp.nr-data.net
+notifications:
+  enabled: true
+selfHealing:
+  enabled: true
+kubernetesCollection:
+  enabled: true
+  insecureSkipVerify: false
+persistence:
+  enabled: false

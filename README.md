@@ -1,5 +1,7 @@
 # ToggleMaster — Tech Challenge Fase 3
 
+Preparação da Fase 4: [observabilidade, testes locais e implantação futura](observability/README.md). Os cinco serviços, métricas, logs e ciclo de alerta foram verificados em containers locais em 12/11/2026; a validação no AWS Academy e as evidências finais ainda estão pendentes.
+
 Projeto da Pós-graduação FIAP voltado à automação de infraestrutura, CI/CD, DevSecOps e GitOps na AWS. A solução executa cinco microsserviços no Amazon EKS e utiliza Terraform, GitHub Actions, Amazon ECR e Argo CD, respeitando as restrições do AWS Academy.
 
 ## Arquitetura

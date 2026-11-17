@@ -7,6 +7,8 @@ import (
 	"os"
 	"time"
 
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sqs"
@@ -29,6 +31,12 @@ type App struct {
 
 func main() {
 	_ = godotenv.Load() // Carrega .env para dev local
+	shutdown, err := setupTelemetry("evaluation-service")
+	if err != nil {
+		flushTelemetry(shutdown)
+		log.Fatalf("Erro ao configurar telemetria: %v", err)
+	}
+	defer flushTelemetry(shutdown)
 
 	// --- Configuração ---
 	port := os.Getenv("PORT")
@@ -62,7 +70,7 @@ func main() {
 	}
 
 	// --- Inicializa Clientes ---
-	
+
 	// Cliente Redis
 	opt, err := redis.ParseURL(redisURL)
 	if err != nil {
@@ -79,15 +87,15 @@ func main() {
 	if sqsQueueURL != "" {
 		sqsEndpointURL := os.Getenv("SQS_ENDPOINT_URL")
 
-awsConfig := &aws.Config{
-	Region: aws.String(awsRegion),
-}
+		awsConfig := &aws.Config{
+			Region: aws.String(awsRegion),
+		}
 
-if sqsEndpointURL != "" {
-	awsConfig.Endpoint = aws.String(sqsEndpointURL)
-}
+		if sqsEndpointURL != "" {
+			awsConfig.Endpoint = aws.String(sqsEndpointURL)
+		}
 
-sess, err := session.NewSession(awsConfig)
+		sess, err := session.NewSession(awsConfig)
 		if err != nil {
 			log.Fatalf("Não foi possível criar sessão AWS: %v", err)
 		}
@@ -97,7 +105,8 @@ sess, err := session.NewSession(awsConfig)
 
 	// Cliente HTTP (com timeout)
 	httpClient := &http.Client{
-		Timeout: 5 * time.Second,
+		Timeout:   5 * time.Second,
+		Transport: otelhttp.NewTransport(http.DefaultTransport),
 	}
 
 	// Cria a instância da App
@@ -113,10 +122,10 @@ sess, err := session.NewSession(awsConfig)
 	// --- Rotas ---
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", app.healthHandler)
-	mux.HandleFunc("/evaluate", app.evaluationHandler)
+	mux.Handle("/evaluate", instrumentHandler("evaluation-service", "/evaluate", http.HandlerFunc(app.evaluationHandler)))
 
 	log.Printf("Serviço de Avaliação (Go) rodando na porta %s", port)
-	if err := http.ListenAndServe(":"+port, mux); err != nil {
-		log.Fatal(err)
+	if err := serveHTTP(port, mux); err != nil {
+		log.Printf("Servidor encerrado com erro: %v", err)
 	}
 }

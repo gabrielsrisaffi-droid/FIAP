@@ -1,0 +1,38 @@
+images:
+  collector: otel/opentelemetry-collector-contrib:0.165.0
+  prometheus: prom/prometheus:v3.16.0
+  loki: grafana/loki:3.7.9
+  grafana: grafana/grafana:13.3.0
+  python: python:3.11-slim
+applicationNamespace: togglemaster
+existingSecret: observability-secrets
+newRelic:
+  enabled: false
+  endpoint: https://otlp.nr-data.net
+notifications:
+  enabled: false
+selfHealing:
+  enabled: false
+  deployment: evaluation-service
+  cooldownSeconds: 300
+kubernetesCollection:
+  enabled: true
+  # Enable only if the lab kubelet certificate cannot be verified with its CA.
+  insecureSkipVerify: false
+persistence:
+  enabled: false
+  storageClass: ""
+  size: 5Gi
+resources:
+  collector:
+    requests: {cpu: 100m, memory: 128Mi}
+    limits: {cpu: 500m, memory: 384Mi}
+  prometheus:
+    requests: {cpu: 100m, memory: 256Mi}
+    limits: {cpu: 500m, memory: 768Mi}
+  loki:
+    requests: {cpu: 100m, memory: 128Mi}
+    limits: {cpu: 500m, memory: 512Mi}
+  grafana:
+    requests: {cpu: 100m, memory: 128Mi}
+    limits: {cpu: 500m, memory: 384Mi}

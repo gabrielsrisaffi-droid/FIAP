@@ -1,0 +1,9 @@
+exporters:
+  otlp_http/newrelic:
+    endpoint: ${env:NEW_RELIC_OTLP_ENDPOINT}
+    headers:
+      api-key: ${env:NEW_RELIC_LICENSE_KEY}
+service:
+  pipelines:
+    traces:
+      exporters: [otlp_http/newrelic]

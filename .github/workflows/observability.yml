@@ -1,0 +1,85 @@
+name: Observability offline validation
+
+on:
+  pull_request:
+    paths: ['observability/**', 'tests/**', '*-service/**', '.github/workflows/observability.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  python-telemetry:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [flag, targeting, analytics]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.11'}
+      - name: Install dependencies
+        run: pip install -r "${{ matrix.service }}-service/${{ matrix.service }}-service-main/requirements.txt" pytest==9.2.0
+      - name: Export three signals and propagate HTTP and queue context
+        env:
+          SERVICE_DIRECTORY: ${{ matrix.service }}-service/${{ matrix.service }}-service-main
+        run: python -m pytest tests/test_python_telemetry.py -q
+
+  configs-and-automation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.11'}
+      - name: Install validation dependencies
+        run: pip install -r flag-service/flag-service-main/requirements.txt pytest==9.2.0 pyyaml==6.0.3 ruff==0.12.12 bandit==1.9.4
+      - name: Install verified Helm and Collector binaries
+        shell: bash
+        run: |
+          mkdir -p /tmp/fiap-tools
+          cd /tmp/fiap-tools
+          curl -fsSLO https://get.helm.sh/helm-v3.19.0-linux-amd64.tar.gz
+          curl -fsSLO https://get.helm.sh/helm-v3.19.0-linux-amd64.tar.gz.sha256sum
+          sha256sum -c helm-v3.19.0-linux-amd64.tar.gz.sha256sum
+          tar -xzf helm-v3.19.0-linux-amd64.tar.gz
+          BASE=https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/v0.165.0
+          curl -fsSLO "$BASE/otelcol-contrib_0.165.0_linux_amd64.tar.gz"
+          curl -fsSLO "$BASE/otelcol-contrib_0.165.0_checksums.txt"
+          grep ' otelcol-contrib_0.165.0_linux_amd64.tar.gz$' otelcol-contrib_0.165.0_checksums.txt | sha256sum -c -
+          tar -xzf otelcol-contrib_0.165.0_linux_amd64.tar.gz
+          PROM_BASE=https://github.com/prometheus/prometheus/releases/download/v3.16.0
+          curl -fsSLO "$PROM_BASE/prometheus-3.16.0.linux-amd64.tar.gz"
+          curl -fsSL "$PROM_BASE/sha256sums.txt" -o prometheus-sha256sums.txt
+          grep ' prometheus-3.16.0.linux-amd64.tar.gz$' prometheus-sha256sums.txt | sha256sum -c -
+          tar -xzf prometheus-3.16.0.linux-amd64.tar.gz
+          echo /tmp/fiap-tools/linux-amd64 >> "$GITHUB_PATH"
+          echo /tmp/fiap-tools >> "$GITHUB_PATH"
+          echo /tmp/fiap-tools/prometheus-3.16.0.linux-amd64 >> "$GITHUB_PATH"
+      - name: Lint, render and inspect manifests
+        run: |
+          ruff check observability tests
+          bandit -r observability/chart/files -ll
+          python observability/scripts/build_dashboard.py
+          git diff --exit-code -- observability/chart/files/dashboard.json
+          helm lint observability/chart
+          helm template observability observability/chart --namespace observability --set newRelic.enabled=true --set notifications.enabled=true --set selfHealing.enabled=true --set persistence.enabled=true > /tmp/chart.yaml
+          kubectl kustomize observability/lab-demo > /tmp/apps.yaml
+          python observability/scripts/validate_manifests.py /tmp/chart.yaml /tmp/apps.yaml
+          otelcol-contrib validate --config=observability/chart/files/collector.yaml
+      - name: Test alert thresholds, timing, recovery and dashboard PromQL
+        run: python observability/scripts/test_alerts.py
+      - name: Validate local Compose configurations
+        env:
+          GF_SECURITY_ADMIN_PASSWORD: validation-placeholder-only
+          PAGERDUTY_ROUTING_KEY: validation-placeholder-only
+          PAGERDUTY_API_TOKEN: validation-placeholder-only
+          PAGERDUTY_SERVICE_ID: validation-placeholder-only
+          DISCORD_WEBHOOK_URL: https://example.invalid/discord-webhook
+        run: |
+          docker compose -f observability/local/compose.yaml config --quiet
+          docker compose -f observability/local/compose.yaml -f observability/local/incidents.override.yaml config --quiet
+          docker compose -f docker-compose.yml -f observability/local/apps.override.yaml config --quiet
+      - name: Test Collector and incident automation without external services
+        env:
+          COLLECTOR_BINARY: /tmp/fiap-tools/otelcol-contrib
+        run: python -m pytest tests/test_collector_contract.py tests/test_incident_automation.py -q

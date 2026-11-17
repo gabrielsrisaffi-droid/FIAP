@@ -1,0 +1,42 @@
+{
+  "checked_at": "2026-11-15T23:24:50.919163+00:00",
+  "environment": "local-compose",
+  "services": {
+    "auth-service": 200,
+    "flag-service": 200,
+    "targeting-service": 200,
+    "evaluation-service": 200,
+    "analytics-service": 200
+  },
+  "grafana_health": "ok",
+  "dashboard": {
+    "title": "ToggleMaster | Fase 4",
+    "panels": 8
+  },
+  "datasources": {
+    "prometheus": "OK",
+    "loki": "OK"
+  },
+  "http_requests_by_service": {
+    "evaluation-service": 27.0,
+    "auth-service": 6.0,
+    "flag-service": 3.0,
+    "targeting-service": 3.0
+  },
+  "log_services": [
+    "analytics-service",
+    "auth-service",
+    "evaluation-service",
+    "flag-service",
+    "targeting-service"
+  ],
+  "alerts": [
+    {
+      "name": "EvaluationHighErrorRate",
+      "state": "inactive",
+      "health": "ok",
+      "last_error": ""
+    }
+  ],
+  "demo_events_in_dynamodb": 36
+}

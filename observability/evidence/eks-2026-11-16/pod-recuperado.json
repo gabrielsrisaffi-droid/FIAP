@@ -1,0 +1,342 @@
+﻿{
+    "apiVersion": "v1",
+    "items": [
+        {
+            "apiVersion": "v1",
+            "kind": "Pod",
+            "metadata": {
+                "annotations": {
+                    "togglemaster.fiap/restartedAt": "2026-11-16T23:50:15.028251+00:00"
+                },
+                "creationTimestamp": "2026-11-16T23:50:15Z",
+                "generateName": "evaluation-service-5547ddf7cf-",
+                "generation": 1,
+                "labels": {
+                    "app.kubernetes.io/name": "evaluation-service",
+                    "app.kubernetes.io/part-of": "togglemaster",
+                    "pod-template-hash": "5547ddf7cf"
+                },
+                "name": "evaluation-service-5547ddf7cf-4h7j4",
+                "namespace": "togglemaster",
+                "ownerReferences": [
+                    {
+                        "apiVersion": "apps/v1",
+                        "blockOwnerDeletion": true,
+                        "controller": true,
+                        "kind": "ReplicaSet",
+                        "name": "evaluation-service-5547ddf7cf",
+                        "uid": "684e0961-13d2-44a5-a9a3-f727d0336abb"
+                    }
+                ],
+                "resourceVersion": "16622",
+                "uid": "f7323c93-637f-4c41-b78a-92a0c84da873"
+            },
+            "spec": {
+                "automountServiceAccountToken": false,
+                "containers": [
+                    {
+                        "env": [
+                            {
+                                "name": "PORT",
+                                "value": "8004"
+                            },
+                            {
+                                "name": "REDIS_URL",
+                                "valueFrom": {
+                                    "configMapKeyRef": {
+                                        "key": "REDIS_URL",
+                                        "name": "event-services-config"
+                                    }
+                                }
+                            },
+                            {
+                                "name": "FLAG_SERVICE_URL",
+                                "valueFrom": {
+                                    "configMapKeyRef": {
+                                        "key": "FLAG_SERVICE_URL",
+                                        "name": "event-services-config"
+                                    }
+                                }
+                            },
+                            {
+                                "name": "TARGETING_SERVICE_URL",
+                                "valueFrom": {
+                                    "configMapKeyRef": {
+                                        "key": "TARGETING_SERVICE_URL",
+                                        "name": "event-services-config"
+                                    }
+                                }
+                            },
+                            {
+                                "name": "AWS_REGION",
+                                "valueFrom": {
+                                    "configMapKeyRef": {
+                                        "key": "AWS_REGION",
+                                        "name": "event-services-config"
+                                    }
+                                }
+                            },
+                            {
+                                "name": "AWS_SQS_URL",
+                                "valueFrom": {
+                                    "configMapKeyRef": {
+                                        "key": "AWS_SQS_URL",
+                                        "name": "event-services-config"
+                                    }
+                                }
+                            },
+                            {
+                                "name": "SERVICE_API_KEY",
+                                "valueFrom": {
+                                    "secretKeyRef": {
+                                        "key": "SERVICE_API_KEY",
+                                        "name": "evaluation-service-secrets"
+                                    }
+                                }
+                            },
+                            {
+                                "name": "OTEL_EXPORTER_OTLP_ENDPOINT",
+                                "value": "http://otel-collector.observability.svc.cluster.local:4318"
+                            },
+                            {
+                                "name": "OTEL_EXPORTER_OTLP_PROTOCOL",
+                                "value": "http/protobuf"
+                            },
+                            {
+                                "name": "OTEL_METRIC_EXPORT_INTERVAL",
+                                "value": "10000"
+                            },
+                            {
+                                "name": "OTEL_RESOURCE_ATTRIBUTES",
+                                "value": "deployment.environment.name=fiap-lab"
+                            },
+                            {
+                                "name": "OTEL_TRACES_SAMPLER",
+                                "value": "parentbased_always_on"
+                            },
+                            {
+                                "name": "ENABLE_FAULT_INJECTION",
+                                "value": "true"
+                            }
+                        ],
+                        "image": "639123725828.dkr.ecr.us-east-1.amazonaws.com/togglemaster/evaluation-service:fase4-20261116-194602@sha256:79348b7cc614d228f4cf326bbb61c504c899f1f9af6d3010b5735f64422f995f",
+                        "imagePullPolicy": "IfNotPresent",
+                        "livenessProbe": {
+                            "failureThreshold": 3,
+                            "httpGet": {
+                                "path": "/health",
+                                "port": "http",
+                                "scheme": "HTTP"
+                            },
+                            "periodSeconds": 20,
+                            "successThreshold": 1,
+                            "timeoutSeconds": 3
+                        },
+                        "name": "evaluation-service",
+                        "ports": [
+                            {
+                                "containerPort": 8004,
+                                "name": "http",
+                                "protocol": "TCP"
+                            }
+                        ],
+                        "readinessProbe": {
+                            "failureThreshold": 3,
+                            "httpGet": {
+                                "path": "/health",
+                                "port": "http",
+                                "scheme": "HTTP"
+                            },
+                            "periodSeconds": 10,
+                            "successThreshold": 1,
+                            "timeoutSeconds": 3
+                        },
+                        "resources": {
+                            "limits": {
+                                "cpu": "300m",
+                                "memory": "256Mi"
+                            },
+                            "requests": {
+                                "cpu": "50m",
+                                "memory": "64Mi"
+                            }
+                        },
+                        "securityContext": {
+                            "allowPrivilegeEscalation": false,
+                            "capabilities": {
+                                "drop": [
+                                    "ALL"
+                                ]
+                            },
+                            "readOnlyRootFilesystem": true
+                        },
+                        "startupProbe": {
+                            "failureThreshold": 30,
+                            "httpGet": {
+                                "path": "/health",
+                                "port": "http",
+                                "scheme": "HTTP"
+                            },
+                            "periodSeconds": 5,
+                            "successThreshold": 1,
+                            "timeoutSeconds": 1
+                        },
+                        "terminationMessagePath": "/dev/termination-log",
+                        "terminationMessagePolicy": "File",
+                        "volumeMounts": [
+                            {
+                                "mountPath": "/tmp",
+                                "name": "fault-tmp"
+                            }
+                        ]
+                    }
+                ],
+                "dnsPolicy": "ClusterFirst",
+                "enableServiceLinks": true,
+                "nodeName": "ip-10-30-1-142.ec2.internal",
+                "preemptionPolicy": "PreemptLowerPriority",
+                "priority": 0,
+                "restartPolicy": "Always",
+                "schedulerName": "default-scheduler",
+                "securityContext": {
+                    "runAsGroup": 1000,
+                    "runAsNonRoot": true,
+                    "runAsUser": 1000,
+                    "seccompProfile": {
+                        "type": "RuntimeDefault"
+                    }
+                },
+                "serviceAccount": "default",
+                "serviceAccountName": "default",
+                "terminationGracePeriodSeconds": 30,
+                "tolerations": [
+                    {
+                        "effect": "NoExecute",
+                        "key": "node.kubernetes.io/not-ready",
+                        "operator": "Exists",
+                        "tolerationSeconds": 300
+                    },
+                    {
+                        "effect": "NoExecute",
+                        "key": "node.kubernetes.io/unreachable",
+                        "operator": "Exists",
+                        "tolerationSeconds": 300
+                    }
+                ],
+                "volumes": [
+                    {
+                        "emptyDir": {
+                            "sizeLimit": "16Mi"
+                        },
+                        "name": "fault-tmp"
+                    }
+                ]
+            },
+            "status": {
+                "conditions": [
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-11-16T23:50:15Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "PodReadyToStartContainers"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-11-16T23:50:15Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "Initialized"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-11-16T23:50:20Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "Ready"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-11-16T23:50:20Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "ContainersReady"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-11-16T23:50:15Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "PodScheduled"
+                    }
+                ],
+                "containerStatuses": [
+                    {
+                        "allocatedResources": {
+                            "cpu": "50m",
+                            "memory": "64Mi"
+                        },
+                        "containerID": "containerd://2f5bd228ef4602f5b8694189afd35bc331c14ebd84e420a1a1a64686fdcc2400",
+                        "image": "sha256:ca63b8e1ded8f02c8cab0bf4156f46f63f6c9180817b84e4c9367667434bcd82",
+                        "imageID": "639123725828.dkr.ecr.us-east-1.amazonaws.com/togglemaster/evaluation-service@sha256:79348b7cc614d228f4cf326bbb61c504c899f1f9af6d3010b5735f64422f995f",
+                        "lastState": {},
+                        "name": "evaluation-service",
+                        "ready": true,
+                        "resources": {
+                            "limits": {
+                                "cpu": "300m",
+                                "memory": "256Mi"
+                            },
+                            "requests": {
+                                "cpu": "50m",
+                                "memory": "64Mi"
+                            }
+                        },
+                        "restartCount": 0,
+                        "started": true,
+                        "state": {
+                            "running": {
+                                "startedAt": "2026-11-16T23:50:15Z"
+                            }
+                        },
+                        "user": {
+                            "linux": {
+                                "gid": 1000,
+                                "supplementalGroups": [
+                                    1000
+                                ],
+                                "uid": 1000
+                            }
+                        },
+                        "volumeMounts": [
+                            {
+                                "mountPath": "/tmp",
+                                "name": "fault-tmp"
+                            }
+                        ]
+                    }
+                ],
+                "hostIP": "10.30.1.142",
+                "hostIPs": [
+                    {
+                        "ip": "10.30.1.142"
+                    }
+                ],
+                "observedGeneration": 1,
+                "phase": "Running",
+                "podIP": "10.30.1.233",
+                "podIPs": [
+                    {
+                        "ip": "10.30.1.233"
+                    }
+                ],
+                "qosClass": "Burstable",
+                "startTime": "2026-11-16T23:50:15Z"
+            }
+        }
+    ],
+    "kind": "List",
+    "metadata": {
+        "resourceVersion": ""
+    }
+}
