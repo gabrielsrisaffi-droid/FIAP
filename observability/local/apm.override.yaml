@@ -1,0 +1,9 @@
+# Optional: enable after configuring the New Relic account, ingest key and regional endpoint.
+services:
+  otel-collector:
+    command: ["--config=/etc/otel/config.yaml", "--config=/etc/otel/apm.yaml"]
+    environment:
+      NEW_RELIC_OTLP_ENDPOINT: ${NEW_RELIC_OTLP_ENDPOINT:-https://otlp.nr-data.net}
+      NEW_RELIC_LICENSE_KEY: ${NEW_RELIC_LICENSE_KEY:?Preencha a ingest license key localmente}
+    volumes:
+      - ../chart/files/collector-apm.yaml:/etc/otel/apm.yaml:ro

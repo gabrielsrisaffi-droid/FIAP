@@ -1,0 +1,14 @@
+# Merge via ArgoCD only after configuring accounts, secrets and cluster storage.
+newRelic:
+  enabled: true
+  # For an EU New Relic account use https://otlp.eu01.nr-data.net
+  endpoint: https://otlp.nr-data.net
+notifications:
+  enabled: true
+selfHealing:
+  enabled: true
+kubernetesCollection:
+  insecureSkipVerify: false
+persistence:
+  # Enable only after verifying that the cluster has a working StorageClass/CSI.
+  enabled: false

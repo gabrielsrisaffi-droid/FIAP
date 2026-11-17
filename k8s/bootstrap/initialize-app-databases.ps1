@@ -11,7 +11,7 @@ Nao utilizar Start-Transcript, Set-PSDebug ou dumps dos objetos deste script.
 param([switch]$ValidateOnly)
 
 $ErrorActionPreference = 'Stop'
-$EksContext = 'arn:aws:eks:us-east-1:505980114754:cluster/togglemaster-eks'
+$EksContext = 'togglemaster-fase4-975049982026'
 $Namespace = 'togglemaster'
 
 function Invoke-KubeRead {

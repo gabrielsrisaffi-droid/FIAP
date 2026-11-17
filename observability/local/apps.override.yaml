@@ -1,0 +1,19 @@
+# Use with the root docker-compose.yml. Collector runs on a separate local stack.
+x-otel: &otel
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://host.docker.internal:4318
+  OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+  OTEL_METRIC_EXPORT_INTERVAL: "5000"
+  OTEL_RESOURCE_ATTRIBUTES: deployment.environment.name=local
+services:
+  auth-service:
+    environment: *otel
+  flag-service:
+    environment: *otel
+  targeting-service:
+    environment: *otel
+  evaluation-service:
+    environment:
+      <<: *otel
+      ENABLE_FAULT_INJECTION: "true"
+  analytics-service:
+    environment: *otel

@@ -1,0 +1,10 @@
+apiVersion: 1
+providers:
+  - name: ToggleMaster
+    orgId: 1
+    folder: ToggleMaster
+    type: file
+    disableDeletion: false
+    editable: false
+    options:
+      path: /var/lib/grafana/dashboards

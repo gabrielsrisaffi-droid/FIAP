@@ -1,0 +1,53 @@
+{
+  "environment": "local-compose",
+  "recovery_action": "manual removal of lab fault; no Kubernetes automation",
+  "events": [
+    {
+      "time": "2026-11-12T22:22:24.627552+00:00",
+      "event": "fault_injected"
+    },
+    {
+      "time": "2026-11-12T22:22:24.631316+00:00",
+      "event": "evaluation_failed",
+      "status": 503
+    },
+    {
+      "time": "2026-11-12T22:22:24.640362+00:00",
+      "event": "alert_state",
+      "state": "inactive"
+    },
+    {
+      "time": "2026-11-12T22:23:14.680442+00:00",
+      "event": "alert_state",
+      "state": "pending"
+    },
+    {
+      "time": "2026-11-12T22:24:14.729476+00:00",
+      "event": "alert_state",
+      "state": "firing"
+    },
+    {
+      "time": "2026-11-12T22:24:14.925800+00:00",
+      "event": "fault_removed_manually"
+    },
+    {
+      "time": "2026-11-12T22:24:14.935084+00:00",
+      "event": "evaluation_recovered",
+      "status": 200
+    },
+    {
+      "time": "2026-11-12T22:24:14.943165+00:00",
+      "event": "alert_state",
+      "state": "firing"
+    },
+    {
+      "time": "2026-11-12T22:26:45.064797+00:00",
+      "event": "alert_state",
+      "state": "inactive"
+    },
+    {
+      "time": "2026-11-12T22:26:45.065303+00:00",
+      "event": "local_alert_cycle_completed"
+    }
+  ]
+}

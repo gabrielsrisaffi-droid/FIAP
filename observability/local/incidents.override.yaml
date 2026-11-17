@@ -1,0 +1,23 @@
+# Opt-in external notifications. Enable only for an authorized incident exercise.
+services:
+  grafana:
+    environment:
+      PAGERDUTY_ROUTING_KEY: ${PAGERDUTY_ROUTING_KEY:?Configure the Events API v2 integration key}
+    volumes:
+      - ./contacts-incidents.yaml:/etc/grafana/provisioning/alerting/contacts.yaml:ro
+  discord-bridge:
+    image: python:3.11-slim
+    command: [python, -B, -u, /app/discord_bridge.py]
+    environment:
+      PAGERDUTY_API_TOKEN: ${PAGERDUTY_API_TOKEN:?Configure the read-only REST token}
+      PAGERDUTY_SERVICE_ID: ${PAGERDUTY_SERVICE_ID:?Configure the lab service ID}
+      DISCORD_WEBHOOK_URL: ${DISCORD_WEBHOOK_URL:?Configure the lab channel webhook}
+      STATE_FILE: /state/discord.db
+    volumes:
+      - ../chart/files/discord_bridge.py:/app/discord_bridge.py:ro
+      - discord-state:/state
+    read_only: true
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+volumes:
+  discord-state:

@@ -1,0 +1,136 @@
+{{- $root := . -}}
+{{- $components := dict
+  "otel-collector" (dict "image" .Values.images.collector "port" 4318 "resource" "collector" "config" "collector.yaml" "path" "/etc/otel/config.yaml" "args" (list "--config=/etc/otel/config.yaml"))
+  "prometheus" (dict "image" .Values.images.prometheus "port" 9090 "resource" "prometheus" "config" "prometheus.yaml" "path" "/etc/prometheus/prometheus.yml" "data" "/prometheus" "args" (list "--config.file=/etc/prometheus/prometheus.yml" "--storage.tsdb.retention.time=3d"))
+  "loki" (dict "image" .Values.images.loki "port" 3100 "resource" "loki" "config" "loki.yaml" "path" "/etc/loki/config.yaml" "data" "/loki" "args" (list "-config.file=/etc/loki/config.yaml"))
+  "grafana" (dict "image" .Values.images.grafana "port" 3000 "resource" "grafana" "data" "/var/lib/grafana") -}}
+{{ range $name, $component := $components }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+spec:
+  selector: {app: {{ $name }}}
+  ports:
+    - name: http
+      port: {{ $component.port }}
+      targetPort: {{ $component.port }}
+{{ if eq $name "otel-collector" }}
+    - {name: grpc, port: 4317, targetPort: 4317}
+    - {name: metrics, port: 8889, targetPort: 8889}
+{{ end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+spec:
+  replicas: 1
+  strategy: {type: Recreate}
+  selector:
+    matchLabels: {app: {{ $name }}}
+  template:
+    metadata:
+      labels: {app: {{ $name }}}
+      annotations:
+        checksum/config: {{ include (print $root.Template.BasePath "/config.yaml") $root | sha256sum }}
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        fsGroup: 10001
+      containers:
+        - name: {{ $name }}
+          image: {{ $component.image }}
+          imagePullPolicy: IfNotPresent
+{{ if $component.args }}
+          args:
+{{ toYaml $component.args | indent 12 }}
+{{ if and (eq $name "otel-collector") $root.Values.newRelic.enabled }}
+            - --config=/etc/otel/apm.yaml
+{{ end }}
+{{ end }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: [ALL]}
+          resources:
+{{ toYaml (index $root.Values.resources $component.resource) | indent 12 }}
+          ports:
+            - {name: http, containerPort: {{ $component.port }}}
+{{ if eq $name "otel-collector" }}
+            - {name: health, containerPort: 13133}
+{{ end }}
+          readinessProbe:
+            httpGet:
+              path: {{ if eq $name "grafana" }}/api/health{{ else if eq $name "prometheus" }}/-/ready{{ else if eq $name "loki" }}/ready{{ else }}/{{ end }}
+              port: {{ if eq $name "otel-collector" }}health{{ else }}http{{ end }}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+{{ if eq $name "grafana" }}
+          env:
+            - {name: GF_SECURITY_ADMIN_USER, value: admin}
+            - {name: GF_USERS_ALLOW_SIGN_UP, value: "false"}
+            - {name: GF_ANALYTICS_REPORTING_ENABLED, value: "false"}
+            - name: GF_SECURITY_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef: {name: {{ $root.Values.existingSecret }}, key: GF_SECURITY_ADMIN_PASSWORD}
+{{ if $root.Values.notifications.enabled }}
+            - name: PAGERDUTY_ROUTING_KEY
+              valueFrom:
+                secretKeyRef: {name: {{ $root.Values.existingSecret }}, key: PAGERDUTY_ROUTING_KEY}
+{{ end }}
+{{ if $root.Values.selfHealing.enabled }}
+            - name: RUNBOOK_TOKEN
+              valueFrom:
+                secretKeyRef: {name: {{ $root.Values.existingSecret }}, key: RUNBOOK_TOKEN}
+{{ end }}
+{{ else if and (eq $name "otel-collector") $root.Values.newRelic.enabled }}
+          env:
+            - {name: NEW_RELIC_OTLP_ENDPOINT, value: {{ $root.Values.newRelic.endpoint | quote }}}
+            - name: NEW_RELIC_LICENSE_KEY
+              valueFrom:
+                secretKeyRef: {name: {{ $root.Values.existingSecret }}, key: NEW_RELIC_LICENSE_KEY}
+{{ end }}
+          volumeMounts:
+{{ if $component.config }}
+            - {name: config, mountPath: {{ $component.path }}, subPath: {{ $component.config }}, readOnly: true}
+{{ end }}
+{{ if and (eq $name "otel-collector") $root.Values.newRelic.enabled }}
+            - {name: config, mountPath: /etc/otel/apm.yaml, subPath: collector-apm.yaml, readOnly: true}
+{{ end }}
+{{ if eq $name "grafana" }}
+            - {name: config, mountPath: /etc/grafana/provisioning/datasources/datasources.yaml, subPath: datasources.yaml, readOnly: true}
+            - {name: config, mountPath: /etc/grafana/provisioning/dashboards/dashboards.yaml, subPath: dashboards.yaml, readOnly: true}
+            - {name: config, mountPath: /etc/grafana/provisioning/alerting/alerts.yaml, subPath: alerts.yaml, readOnly: true}
+            - {name: config, mountPath: /etc/grafana/provisioning/alerting/contacts.yaml, subPath: contacts.yaml, readOnly: true}
+            - {name: config, mountPath: /var/lib/grafana/dashboards/togglemaster.json, subPath: dashboard.json, readOnly: true}
+{{ end }}
+{{ if $component.data }}
+            - {name: data, mountPath: {{ $component.data }}}
+{{ end }}
+      volumes:
+        - name: config
+          configMap: {name: observability-config}
+{{ if $component.data }}
+        - name: data
+{{ if $root.Values.persistence.enabled }}
+          persistentVolumeClaim: {claimName: {{ $name }}-data}
+{{ else }}
+          emptyDir: {}
+{{ end }}
+{{ end }}
+{{ if and $component.data $root.Values.persistence.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ $name }}-data
+spec:
+  accessModes: [ReadWriteOnce]
+{{ if $root.Values.persistence.storageClass }}
+  storageClassName: {{ $root.Values.persistence.storageClass | quote }}
+{{ end }}
+  resources:
+    requests: {storage: {{ $root.Values.persistence.size }}}
+{{ end }}
+{{ end }}

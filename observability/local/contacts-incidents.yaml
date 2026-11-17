@@ -1,0 +1,36 @@
+apiVersion: 1
+contactPoints:
+  - orgId: 1
+    name: local-only
+    receivers:
+      - uid: local-only
+        type: email
+        settings: {addresses: nobody@localhost}
+  - orgId: 1
+    name: pagerduty-local-test
+    receivers:
+      - uid: pagerduty-local-test
+        type: pagerduty
+        disableResolveMessage: false
+        settings:
+          integrationKey: $PAGERDUTY_ROUTING_KEY
+          severity: critical
+          summary: '[FIAP TESTE LOCAL] EvaluationHighErrorRate - falha controlada'
+muteTimes:
+  - orgId: 1
+    name: local-notifications-disabled
+    time_intervals:
+      - times:
+          - {start_time: '00:00', end_time: '24:00'}
+policies:
+  - orgId: 1
+    receiver: local-only
+    group_by: [grafana_folder, alertname]
+    group_wait: 5s
+    group_interval: 30s
+    repeat_interval: 4h
+    routes:
+      - receiver: pagerduty-local-test
+        object_matchers: [[alertname, '=', EvaluationHighErrorRate], [severity, '=', critical]]
+      - receiver: local-only
+        mute_time_intervals: [local-notifications-disabled]

@@ -1,0 +1,70 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: observability-config
+data:
+{{ range $path, $_ := .Files.Glob "files/*" }}
+  {{ base $path }}: |
+{{ $.Files.Get $path | indent 4 }}
+{{ end }}
+  contacts.yaml: |
+    apiVersion: 1
+    contactPoints:
+      - orgId: 1
+        name: local-only
+        receivers:
+          - uid: local-only
+            type: email
+            disableResolveMessage: true
+            settings:
+              addresses: nobody@localhost
+{{ if .Values.notifications.enabled }}
+      - orgId: 1
+        name: pagerduty
+        receivers:
+          - uid: pagerduty
+            type: pagerduty
+            settings:
+              integrationKey: $PAGERDUTY_ROUTING_KEY
+              severity: critical
+{{ end }}
+{{ if .Values.selfHealing.enabled }}
+      - orgId: 1
+        name: self-healing
+        receivers:
+          - uid: self-healing
+            type: webhook
+            disableResolveMessage: true
+            settings:
+              url: http://incident-runbook:8080/grafana
+              httpMethod: POST
+              authorization_scheme: Bearer
+              authorization_credentials: $RUNBOOK_TOKEN
+{{ end }}
+    muteTimes:
+      - orgId: 1
+        name: local-notifications-disabled
+        time_intervals:
+          - times:
+              - {start_time: '00:00', end_time: '24:00'}
+    policies:
+      - orgId: 1
+        receiver: local-only
+        group_by: [grafana_folder, alertname]
+        group_wait: 5s
+        group_interval: 30s
+        repeat_interval: 4h
+        routes:
+{{ if .Values.notifications.enabled }}
+          - receiver: pagerduty
+            object_matchers: [[severity, '=', critical]]
+            continue: true
+{{ end }}
+{{ if .Values.selfHealing.enabled }}
+          - receiver: self-healing
+            object_matchers: [[automation, '=', restart-evaluation]]
+            # Retry an unhandled incident after cooldown; successful events stay deduplicated.
+            repeat_interval: 1m
+{{ end }}
+          - receiver: local-only
+            mute_time_intervals: [local-notifications-disabled]

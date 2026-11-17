@@ -1,0 +1,103 @@
+{{ if .Values.kubernetesCollection.enabled }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: otel-node-agent
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ .Release.Namespace }}-otel-node-agent
+rules:
+  - apiGroups: [""]
+    resources: [nodes/stats]
+    verbs: [get]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ .Release.Namespace }}-otel-node-agent
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ .Release.Namespace }}-otel-node-agent
+subjects:
+  - kind: ServiceAccount
+    name: otel-node-agent
+    namespace: {{ .Release.Namespace }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otel-node-agent
+data:
+  agent.yaml: |
+    receivers:
+      kubeletstats:
+        collection_interval: 20s
+        auth_type: serviceAccount
+        endpoint: https://${env:K8S_NODE_NAME}:10250
+        insecure_skip_verify: {{ .Values.kubernetesCollection.insecureSkipVerify }}
+        metric_groups: [node, pod, container]
+      filelog:
+        include: [/var/log/pods/*/*/*.log]
+        include_file_path: true
+        start_at: end
+        operators:
+          - type: container
+            id: container-parser
+    processors:
+      memory_limiter: {check_interval: 1s, limit_mib: 180, spike_limit_mib: 40}
+      batch: {timeout: 2s}
+    exporters:
+      otlp_http:
+        endpoint: http://otel-collector:4318
+    service:
+      pipelines:
+        metrics:
+          receivers: [kubeletstats]
+          processors: [memory_limiter, batch]
+          exporters: [otlp_http]
+        logs:
+          receivers: [filelog]
+          processors: [memory_limiter, batch]
+          exporters: [otlp_http]
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: otel-node-agent
+spec:
+  selector:
+    matchLabels: {app: otel-node-agent}
+  template:
+    metadata:
+      labels: {app: otel-node-agent}
+      annotations:
+        checksum/settings: {{ toJson .Values.kubernetesCollection | sha256sum }}
+    spec:
+      serviceAccountName: otel-node-agent
+      containers:
+        - name: collector
+          image: {{ .Values.images.collector }}
+          args: [--config=/etc/otel/agent.yaml]
+          env:
+            - name: K8S_NODE_NAME
+              valueFrom: {fieldRef: {fieldPath: spec.nodeName}}
+          securityContext:
+            runAsUser: 0
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+          resources:
+            requests: {cpu: 100m, memory: 100Mi}
+            limits: {cpu: 300m, memory: 256Mi}
+          volumeMounts:
+            - {name: config, mountPath: /etc/otel, readOnly: true}
+            - {name: pod-logs, mountPath: /var/log/pods, readOnly: true}
+      volumes:
+        - name: config
+          configMap: {name: otel-node-agent}
+        - name: pod-logs
+          hostPath: {path: /var/log/pods, type: Directory}
+{{ end }}

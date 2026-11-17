@@ -67,7 +67,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: auth-service
-          image: 505980114754.dkr.ecr.us-east-1.amazonaws.com/togglemaster/auth-service:54188e2@sha256:3a071781ee20d6efc3bb906d4b747ba3b1d4681b0f5813a0d1640fd748758227
+          image: "975049982026.dkr.ecr.us-east-1.amazonaws.com/togglemaster/auth-service:fase4-20261117-185014@sha256:c28a217dc4adaec41963b0ed93a5613c316e365ef6f0a83b46ef6d39f37b72ca"
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
@@ -201,7 +201,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: flag-service
-          image: 505980114754.dkr.ecr.us-east-1.amazonaws.com/togglemaster/flag-service:54188e2@sha256:c71e8b3c2375805272ae0084dfe4a20a06f2d7bdb32852b525f8c2c7613e7379
+          image: "975049982026.dkr.ecr.us-east-1.amazonaws.com/togglemaster/flag-service:fase4-20261117-185014@sha256:ae1e91f3591b079ee5c33d5ae6ac38c4d1199864c3923c8b771881fb3b8a70b5"
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
@@ -336,7 +336,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: targeting-service
-          image: 505980114754.dkr.ecr.us-east-1.amazonaws.com/togglemaster/targeting-service:54188e2@sha256:e2e89c991654b71af4a0e961902e232d60bb93e1b031ad5965620286bff524b0
+          image: "975049982026.dkr.ecr.us-east-1.amazonaws.com/togglemaster/targeting-service:fase4-20261117-185014@sha256:b0ab6c43448ad283d2c22fedeb05d63484619d0ffe4693f0b9029ec237f5fdfd"
           imagePullPolicy: IfNotPresent
           ports:
             - name: http

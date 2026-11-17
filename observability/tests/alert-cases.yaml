@@ -1,0 +1,87 @@
+# The runner reads the actual Grafana query/threshold/duration and generates the rule under test.
+evaluation_interval: 30s
+tests:
+  - name: healthy-without-any-5xx-series
+    interval: 15s
+    input_series:
+      - series: 'togglemaster_http_requests_total{service_name="evaluation-service",http_response_status_code="200"}'
+        values: '0+100x24'
+    alert_rule_test:
+      - {eval_time: 3m, alertname: EvaluationHighErrorRate, exp_alerts: []}
+  - name: below-five-percent
+    interval: 15s
+    input_series:
+      - series: 'togglemaster_http_requests_total{service_name="evaluation-service",http_response_status_code="200"}'
+        values: '0+96x24'
+      - series: 'togglemaster_http_requests_total{service_name="evaluation-service",http_response_status_code="500"}'
+        values: '0+4x24'
+    alert_rule_test:
+      - {eval_time: 3m, alertname: EvaluationHighErrorRate, exp_alerts: []}
+  - name: exactly-five-percent-is-not-above-threshold
+    interval: 15s
+    input_series:
+      - series: 'togglemaster_http_requests_total{service_name="evaluation-service",http_response_status_code="200"}'
+        values: '0+95x24'
+      - series: 'togglemaster_http_requests_total{service_name="evaluation-service",http_response_status_code="503"}'
+        values: '0+5x24'
+    alert_rule_test:
+      - {eval_time: 3m, alertname: EvaluationHighErrorRate, exp_alerts: []}
+  - name: minimum-volume-prevents-one-off-failure
+    interval: 15s
+    input_series:
+      - series: 'togglemaster_http_requests_total{service_name="evaluation-service",http_response_status_code="503"}'
+        values: '0+1x24'
+    alert_rule_test:
+      - {eval_time: 3m, alertname: EvaluationHighErrorRate, exp_alerts: []}
+  - name: sustained-errors-respect-pending-duration
+    interval: 15s
+    input_series:
+      - series: 'togglemaster_http_requests_total{service_name="evaluation-service",http_response_status_code="200"}'
+        values: '0+80x24'
+      - series: 'togglemaster_http_requests_total{service_name="evaluation-service",http_response_status_code="503"}'
+        values: '0+20x24'
+    alert_rule_test:
+      - {eval_time: 45s, alertname: EvaluationHighErrorRate, exp_alerts: []}
+      - eval_time: 90s
+        alertname: EvaluationHighErrorRate
+        exp_alerts:
+          - exp_labels: {service_name: evaluation-service, severity: critical, automation: restart-evaluation}
+  - name: recovered-service-resolves-after-window-clears
+    interval: 15s
+    input_series:
+      - series: 'togglemaster_http_requests_total{service_name="evaluation-service",http_response_status_code="200"}'
+        values: '0+80x12 1060+100x24'
+      - series: 'togglemaster_http_requests_total{service_name="evaluation-service",http_response_status_code="503"}'
+        values: '0+20x12 240+0x24'
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: EvaluationHighErrorRate
+        exp_alerts:
+          - exp_labels: {service_name: evaluation-service, severity: critical, automation: restart-evaluation}
+      - {eval_time: 6m, alertname: EvaluationHighErrorRate, exp_alerts: []}
+  - name: counter-reset-does-not-hide-continuing-failure
+    interval: 15s
+    input_series:
+      - series: 'togglemaster_http_requests_total{service_name="evaluation-service",http_response_status_code="200"}'
+        values: '0+80x10 0+80x20'
+      - series: 'togglemaster_http_requests_total{service_name="evaluation-service",http_response_status_code="503"}'
+        values: '0+20x10 0+20x20'
+    alert_rule_test:
+      - eval_time: 4m
+        alertname: EvaluationHighErrorRate
+        exp_alerts:
+          - exp_labels: {service_name: evaluation-service, severity: critical, automation: restart-evaluation}
+  - name: no-traffic-is-not-an-error-rate-incident
+    interval: 15s
+    input_series:
+      - series: 'togglemaster_http_requests_total{service_name="evaluation-service",http_response_status_code="503"}'
+        values: '0+0x24'
+    alert_rule_test:
+      - {eval_time: 3m, alertname: EvaluationHighErrorRate, exp_alerts: []}
+  - name: other-service-cannot-trigger-evaluation-restart
+    interval: 15s
+    input_series:
+      - series: 'togglemaster_http_requests_total{service_name="auth-service",http_response_status_code="503"}'
+        values: '0+100x24'
+    alert_rule_test:
+      - {eval_time: 3m, alertname: EvaluationHighErrorRate, exp_alerts: []}

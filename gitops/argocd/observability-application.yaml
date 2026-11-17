@@ -1,0 +1,20 @@
+# Apply only in the deployment stage, after the namespace Secret exists.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: togglemaster-observability
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/gabrielsrisaffi-droid/FIAP.git
+    targetRevision: "codex/techchallenge4-entrega"
+    path: observability/chart
+    helm:
+      releaseName: observability
+      valueFiles: [values.yaml, values-eks.yaml]
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: observability
+  syncPolicy:
+    syncOptions: [CreateNamespace=true]

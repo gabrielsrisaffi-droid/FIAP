@@ -8,6 +8,7 @@ from flask import Flask, request, jsonify
 from dotenv import load_dotenv
 from functools import wraps
 import logging
+from telemetry import configure_telemetry, instrument_flask
 
 # Configura o logging
 logging.basicConfig(level=logging.INFO)
@@ -15,8 +16,10 @@ log = logging.getLogger(__name__)
 
 # Carrega .env para desenvolvimento local
 load_dotenv()
+configure_telemetry("targeting-service")
 
 app = Flask(__name__)
+instrument_flask(app, "targeting-service")
 
 # --- Configuração ---
 DATABASE_URL = os.getenv("DATABASE_URL")

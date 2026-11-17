@@ -1,0 +1,104 @@
+{{ if .Values.selfHealing.enabled }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: incident-runbook
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: incident-runbook
+  namespace: {{ .Values.applicationNamespace }}
+rules:
+  - apiGroups: [apps]
+    resources: [deployments]
+    resourceNames: [{{ .Values.selfHealing.deployment }}]
+    verbs: [get, patch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: incident-runbook
+  namespace: {{ .Values.applicationNamespace }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: incident-runbook
+subjects:
+  - kind: ServiceAccount
+    name: incident-runbook
+    namespace: {{ .Release.Namespace }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: incident-runbook
+spec:
+  selector: {app: incident-runbook}
+  ports: [{name: http, port: 8080, targetPort: 8080}]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: incident-runbook
+spec:
+  replicas: 1
+  strategy: {type: Recreate}
+  selector:
+    matchLabels: {app: incident-runbook}
+  template:
+    metadata:
+      labels: {app: incident-runbook}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/config.yaml") . | sha256sum }}
+    spec:
+      serviceAccountName: incident-runbook
+      securityContext: {runAsNonRoot: true, runAsUser: 10001, fsGroup: 10001}
+      containers:
+        - name: runbook
+          image: {{ .Values.images.python }}
+          command: [python, -B, -u, /app/runbook.py]
+          env:
+            - {name: APPLICATION_NAMESPACE, value: {{ .Values.applicationNamespace | quote }}}
+            - {name: TARGET_DEPLOYMENT, value: {{ .Values.selfHealing.deployment | quote }}}
+            - {name: COOLDOWN_SECONDS, value: {{ .Values.selfHealing.cooldownSeconds | quote }}}
+            - name: RUNBOOK_TOKEN
+              valueFrom:
+                secretKeyRef: {name: {{ .Values.existingSecret }}, key: RUNBOOK_TOKEN}
+          ports: [{name: http, containerPort: 8080}]
+          readinessProbe:
+            httpGet: {path: /health, port: http}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+          resources:
+            requests: {cpu: 25m, memory: 32Mi}
+            limits: {cpu: 200m, memory: 128Mi}
+          volumeMounts:
+            - {name: code, mountPath: /app, readOnly: true}
+            - {name: state, mountPath: /state}
+      volumes:
+        - name: code
+          configMap: {name: observability-config}
+        - name: state
+{{ if .Values.persistence.enabled }}
+          persistentVolumeClaim: {claimName: incident-state}
+{{ else }}
+          emptyDir: {}
+{{ end }}
+{{ if .Values.persistence.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: incident-state
+spec:
+  accessModes: [ReadWriteOnce]
+{{ if .Values.persistence.storageClass }}
+  storageClassName: {{ .Values.persistence.storageClass | quote }}
+{{ end }}
+  resources:
+    requests: {storage: 1Gi}
+{{ end }}
+{{ end }}

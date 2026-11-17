@@ -9,6 +9,9 @@ import boto3
 from botocore.exceptions import NoCredentialsError, ClientError
 from flask import Flask, jsonify
 from dotenv import load_dotenv
+from opentelemetry import trace
+from opentelemetry.trace import SpanKind, Status, StatusCode
+from telemetry import configure_telemetry, instrument_flask, message_context
 
 # Configura o logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -16,6 +19,7 @@ log = logging.getLogger(__name__)
 
 # Carrega .env para desenvolvimento local
 load_dotenv()
+configure_telemetry("analytics-service")
 
 # --- Configuração ---
 AWS_REGION = os.getenv("AWS_REGION")
@@ -55,6 +59,20 @@ except Exception as e:
 # --- SQS Worker ---
 
 def process_message(message):
+    with trace.get_tracer("togglemaster.messaging").start_as_current_span(
+        "togglemaster-events process",
+        context=message_context(message),
+        kind=SpanKind.CONSUMER,
+        attributes={
+            "messaging.system": "aws_sqs",
+            "messaging.destination.name": "togglemaster-events",
+            "messaging.operation.type": "process",
+        },
+    ):
+        _process_message(message)
+
+
+def _process_message(message):
     """ Processa uma única mensagem SQS e a insere no DynamoDB """
     try:
         log.info(f"Processando mensagem ID: {message['MessageId']}")
@@ -73,10 +91,11 @@ def process_message(message):
         }
         
         # Insere no DynamoDB
-        dynamodb_client.put_item(
-            TableName=DYNAMODB_TABLE_NAME,
-            Item=item
-        )
+        with trace.get_tracer("togglemaster.database").start_as_current_span(
+            "DynamoDB PutItem", kind=SpanKind.CLIENT,
+            attributes={"db.system.name": "aws.dynamodb", "db.namespace": DYNAMODB_TABLE_NAME},
+        ):
+            dynamodb_client.put_item(TableName=DYNAMODB_TABLE_NAME, Item=item)
         
         log.info(f"Evento {event_id} (Flag: {body['flag_name']}) salvo no DynamoDB.")
         
@@ -86,13 +105,19 @@ def process_message(message):
             ReceiptHandle=message['ReceiptHandle']
         )
         
-    except json.JSONDecodeError:
+    except json.JSONDecodeError as e:
+        trace.get_current_span().record_exception(e)
+        trace.get_current_span().set_status(Status(StatusCode.ERROR, "Invalid event JSON"))
         log.error(f"Erro ao decodificar JSON da mensagem ID: {message['MessageId']}")
         # Não deleta a mensagem, pode ser uma "poison pill"
     except ClientError as e:
+        trace.get_current_span().record_exception(e)
+        trace.get_current_span().set_status(Status(StatusCode.ERROR, "AWS operation failed"))
         log.error(f"Erro do Boto3 (DynamoDB ou SQS) ao processar {message['MessageId']}: {e}")
         # Não deleta a mensagem, tenta novamente
     except Exception as e:
+        trace.get_current_span().record_exception(e)
+        trace.get_current_span().set_status(Status(StatusCode.ERROR, "Event processing failed"))
         log.error(f"Erro inesperado ao processar {message['MessageId']}: {e}")
         # Não deleta a mensagem, tenta novamente
 
@@ -105,7 +130,8 @@ def sqs_worker_loop():
             response = sqs_client.receive_message(
                 QueueUrl=SQS_QUEUE_URL,
                 MaxNumberOfMessages=10,  # Processa em lotes de até 10
-                WaitTimeSeconds=20
+                WaitTimeSeconds=20,
+                MessageAttributeNames=["traceparent", "tracestate"],
             )
             
             messages = response.get('Messages', [])
@@ -128,6 +154,7 @@ def sqs_worker_loop():
 # --- Servidor Flask (Apenas para Health Check) ---
 
 app = Flask(__name__)
+instrument_flask(app, "analytics-service")
 
 @app.route('/health')
 def health():

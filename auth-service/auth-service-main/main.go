@@ -19,6 +19,12 @@ type App struct {
 func main() {
 	// Carrega o .env para desenvolvimento local. Em produção, isso não fará nada.
 	_ = godotenv.Load()
+	shutdown, err := setupTelemetry("auth-service")
+	if err != nil {
+		flushTelemetry(shutdown)
+		log.Fatalf("Erro ao configurar telemetria: %v", err)
+	}
+	defer flushTelemetry(shutdown)
 
 	// --- Configuração ---
 	port := os.Getenv("PORT")
@@ -57,15 +63,15 @@ func main() {
 	mux.HandleFunc("/health", app.healthHandler)
 
 	// Endpoint público para validar uma chave
-	mux.HandleFunc("/validate", app.validateKeyHandler)
+	mux.Handle("/validate", instrumentHandler("auth-service", "/validate", http.HandlerFunc(app.validateKeyHandler)))
 
 	// Endpoints de "admin" para criar/gerenciar chaves
 	// Eles são protegidos pelo middleware de autenticação
-	mux.Handle("/admin/keys", app.masterKeyAuthMiddleware(http.HandlerFunc(app.createKeyHandler)))
+	mux.Handle("/admin/keys", instrumentHandler("auth-service", "/admin/keys", app.masterKeyAuthMiddleware(http.HandlerFunc(app.createKeyHandler))))
 
 	log.Printf("Serviço de Autenticação (Go) rodando na porta %s", port)
-	if err := http.ListenAndServe(":"+port, mux); err != nil {
-		log.Fatal(err)
+	if err := serveHTTP(port, mux); err != nil {
+		log.Printf("Servidor encerrado com erro: %v", err)
 	}
 }
 
