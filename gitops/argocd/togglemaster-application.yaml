@@ -10,7 +10,7 @@ spec:
 
   source:
     repoURL: "https://github.com/gabrielsrisaffi-droid/FIAP.git"
-    targetRevision: "main"
+    targetRevision: "codex/techchallenge4-entrega"
     path: observability/apps
 
   destination:

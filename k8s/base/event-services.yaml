@@ -7,9 +7,9 @@ metadata:
     app.kubernetes.io/part-of: togglemaster
 data:
   AWS_REGION: "us-east-1"
-  AWS_SQS_URL: "https://sqs.us-east-1.amazonaws.com/639123725828/togglemaster-events"
+  AWS_SQS_URL: "https://sqs.us-east-1.amazonaws.com/975049982026/togglemaster-events"
   AWS_DYNAMODB_TABLE: "ToggleMasterAnalytics"
-  REDIS_URL: "rediss://master.togglemaster-redis.tmp8yz.use1.cache.amazonaws.com:6379"
+  REDIS_URL: "rediss://master.togglemaster-redis.6vetfe.use1.cache.amazonaws.com:6379"
   FLAG_SERVICE_URL: "http://flag-service:8002"
   TARGETING_SERVICE_URL: "http://targeting-service:8003"
 ---
@@ -61,7 +61,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: evaluation-service
-          image: "639123725828.dkr.ecr.us-east-1.amazonaws.com/togglemaster/evaluation-service:fase4-20261116-194602@sha256:79348b7cc614d228f4cf326bbb61c504c899f1f9af6d3010b5735f64422f995f"
+          image: "975049982026.dkr.ecr.us-east-1.amazonaws.com/togglemaster/evaluation-service:fase4-20261117-185014@sha256:3ff3415854fe9ef55b3f66c1d041c55b89e27ca329d66d686cbfb5320606e4d4"
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
@@ -182,7 +182,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: analytics-service
-          image: "639123725828.dkr.ecr.us-east-1.amazonaws.com/togglemaster/analytics-service:fase4-20261116-194602@sha256:a95c4189bc8f9d3ecc5f2548561f0ed5472dd90409f286f8b8e8bfdb3a5725f7"
+          image: "975049982026.dkr.ecr.us-east-1.amazonaws.com/togglemaster/analytics-service:fase4-20261117-185014@sha256:fb9a8ff2f4aca432dd32da87225c4aad46d435aefc65dbe604f57b4e9f27663e"
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
