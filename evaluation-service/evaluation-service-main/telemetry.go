@@ -19,7 +19,6 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	logapi "go.opentelemetry.io/otel/log"
-	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
 	logsdk "go.opentelemetry.io/otel/sdk/log"
@@ -68,7 +67,7 @@ func setupTelemetry(service string) (func(context.Context) error, error) {
 	shutdowns = append(shutdowns, lp.Shutdown)
 	otel.SetTracerProvider(tp)
 	otel.SetMeterProvider(mp)
-	global.SetLoggerProvider(lp)
+	otel.SetLoggerProvider(lp)
 	otel.SetTextMapPropagator(propagation.TraceContext{})
 	log.SetOutput(io.MultiWriter(os.Stdout, telemetryLogWriter{}))
 	return shutdown, nil
@@ -81,7 +80,7 @@ func (telemetryLogWriter) Write(p []byte) (int, error) {
 	record.SetTimestamp(time.Now())
 	record.SetSeverity(logapi.SeverityInfo)
 	record.SetBody(attribute.StringValue(strings.TrimSpace(string(p))))
-	global.Logger("togglemaster.application").Emit(context.Background(), record)
+	otel.Logger("togglemaster.application").Emit(context.Background(), record)
 	return len(p), nil
 }
 
@@ -139,7 +138,7 @@ func instrumentHandler(service, route string, next http.Handler) http.Handler {
 		}
 		record.SetBody(attribute.StringValue("HTTP request completed"))
 		record.AddAttributes(attribute.String("service.name", service), attribute.String("http.route", route), attribute.String("http.request.method", r.Method), attribute.Int("http.response.status_code", status))
-		global.Logger("togglemaster.http").Emit(r.Context(), record)
+		otel.Logger("togglemaster.http").Emit(r.Context(), record)
 	})
 	return otelhttp.NewHandler(handler, route)
 }

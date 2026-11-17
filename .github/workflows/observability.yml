@@ -44,8 +44,9 @@ jobs:
           tar -xzf helm-v3.19.0-linux-amd64.tar.gz
           BASE=https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/v0.165.0
           curl -fsSLO "$BASE/otelcol-contrib_0.165.0_linux_amd64.tar.gz"
-          curl -fsSLO "$BASE/otelcol-contrib_0.165.0_checksums.txt"
-          grep ' otelcol-contrib_0.165.0_linux_amd64.tar.gz$' otelcol-contrib_0.165.0_checksums.txt | sha256sum -c -
+          curl -fsSLO "$BASE/otelcol-contrib_0.165.0_linux_amd64.tar.gz.sha256"
+          CHECKSUM=$(awk 'NR==1 {print $1}' otelcol-contrib_0.165.0_linux_amd64.tar.gz.sha256)
+          printf '%s  %s\n' "$CHECKSUM" 'otelcol-contrib_0.165.0_linux_amd64.tar.gz' | sha256sum -c -
           tar -xzf otelcol-contrib_0.165.0_linux_amd64.tar.gz
           PROM_BASE=https://github.com/prometheus/prometheus/releases/download/v3.16.0
           curl -fsSLO "$PROM_BASE/prometheus-3.16.0.linux-amd64.tar.gz"
